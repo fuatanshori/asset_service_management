@@ -1,0 +1,74 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# ===== Virtual environment =====
+.venv/
+venv/
+env/
+ENV/
+
+# ===== Django =====
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Static & media (di-generate ulang lewat collectstatic, atau di-mount
+# lewat volume Docker — jangan ikut ke-commit)
+staticfiles/
+media/
+
+# Migrations dari database dev yang sering di-reset — HAPUS baris ini
+# kalau nanti udah stabil dan migrasinya mau ikut di-commit beneran
+# equipment/migrations/*.py
+# maintenance/migrations/*.py
+# !equipment/migrations/__init__.py
+# !maintenance/migrations/__init__.py
+
+# ===== Environment variables / secrets =====
+.env
+.env.*
+!.env.example
+
+# ===== Docker =====
+*.pid
+
+# ===== IDE / editor =====
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ===== Node (kalau ada tooling frontend, misal Tailwind CLI) =====
+node_modules/
+npm-debug.log*
+
+# ===== Testing / coverage =====
+.coverage
+htmlcov/
+.pytest_cache/
