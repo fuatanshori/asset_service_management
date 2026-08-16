@@ -1,0 +1,208 @@
+  /* =========================
+     GENERAL
+  ========================= */
+
+  body {
+    margin: 0;
+  }
+
+
+  /* =========================
+     TAG / BARCODE
+  ========================= */
+
+  .tag-notch::before {
+    content: "";
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #F1F4F8;
+    box-shadow: 0 0 0 1.5px #DCE3EA inset;
+  }
+
+  .barcode-strip {
+    height: 10px;
+    background-image: repeating-linear-gradient(
+      90deg,
+      #14213D 0px,
+      #14213D 2px,
+      transparent 2px,
+      transparent 5px,
+      #14213D 5px,
+      #14213D 6px,
+      transparent 6px,
+      transparent 10px,
+      #14213D 10px,
+      #14213D 13px,
+      transparent 13px,
+      transparent 16px
+    );
+    opacity: 0.12;
+    border-radius: 2px;
+  }
+
+
+  /* =========================
+     LOGO
+  ========================= */
+
+  .ihc-logo {
+    height: 52px;
+    width: auto;
+    flex-shrink: 0;
+
+    display: flex;
+    align-items: center;
+
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+  }
+
+  .ihc-logo img {
+    height: 100%;
+    width: auto;
+    max-width: 220px;
+
+    object-fit: contain;
+    display: block;
+  }
+
+
+  /* =========================
+     NAVIGATION
+  ========================= */
+
+  .nav-link {
+    padding: 9px 16px;
+    border-radius: 10px;
+
+    font-size: 13.5px;
+    font-weight: 600;
+
+    color: #5E6B7C;
+
+    transition:
+      background-color .15s,
+      color .15s;
+
+    white-space: nowrap;
+  }
+
+  .nav-link:hover {
+    background: #F1F4F8;
+    color: #14213D;
+  }
+
+  .nav-link.active {
+    background: #2A5C8A;
+    color: #fff;
+  }
+
+
+  /* =========================
+     SIDEBAR
+  ========================= */
+
+  .sidebar-link {
+    padding: 12px 15px;
+    border-radius: 10px;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    color: #5E6B7C;
+
+    transition:
+      background-color .15s,
+      color .15s;
+  }
+
+  .sidebar-link:hover {
+    background: #F1F4F8;
+    color: #14213D;
+  }
+
+  .sidebar-link.active {
+    background: #2A5C8A;
+    color: #fff;
+  }
+
+
+  /* =========================
+     FORM
+  ========================= */
+
+  .field-label {
+    display: block;
+
+    font-size: 11.5px;
+    font-weight: 500;
+
+    color: #5E6B7C;
+
+    margin-bottom: 5px;
+  }
+
+  .field-input {
+    width: 100%;
+
+    padding: 9px 12px;
+
+    border-radius: 10px;
+    border: 1px solid #DCE3EA;
+
+    font-size: 13.5px;
+    background: #fff;
+  }
+
+  .field-input:focus {
+    outline: none;
+    border-color: #2A5C8A;
+  }
+
+  .field-value {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #14213D;
+  }
+
+
+  /* =========================
+     BADGE
+  ========================= */
+
+  .badge {
+    display: inline-block;
+
+    padding: 3px 12px;
+
+    border-radius: 9999px;
+
+    font-size: 11.5px;
+    font-weight: 600;
+  }
+
+  .badge-green {
+    background: #E1F1E9;
+    color: #328A63;
+  }
+
+  .badge-amber {
+    background: #F7E9D8;
+    color: #C97A2E;
+  }
+
+  .badge-red {
+    background: #F8E2E0;
+    color: #C0483F;
+  }
+
+  .badge-brand {
+    background: #E2E9F1;
+    color: #2A5C8A;
+  }

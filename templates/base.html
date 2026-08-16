@@ -1,0 +1,106 @@
+{# templates/base.html #}
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manajemen Alat — {% block title %}{% endblock %}</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}">
+    <link rel="stylesheet" href="{% static 'assets/css/output.css' %}">
+
+    {% block extra_head %}{% endblock %}
+</head>
+
+<body class="bg-bg text-ink font-sans antialiased min-h-screen">
+    <header class="bg-white sticky top-0 z-30">
+        <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+                <button onclick="openSidebar()" class="lg:hidden p-2 -ml-2 rounded-[8px] hover:bg-bg transition-colors" aria-label="Buka menu">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#14213D" stroke-width="2" stroke-linecap="round">
+                        <line x1="3" y1="6" x2="21" y2="6"/>
+                        <line x1="3" y1="12" x2="21" y2="12"/>
+                        <line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+
+                <a href="{% url 'dashboard' %}" class="flex items-center gap-3">
+                    <div class="ihc-logo">
+                        <img src="{% static 'assets/img/ihc.png' %}" alt="Logo IHC">
+                    </div>
+                    <span class="font-display text-[16px] font-semibold text-brand">Manajemen Alat</span>
+                </a>
+            </div>
+
+            <nav class="hidden lg:flex items-center gap-1">
+                <a href="{% url 'dashboard' %}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">Dashboard</a>
+                <a href="{% url 'equipment_list' %}" class="nav-link {% if active_page == 'equipment' %}active{% endif %}">Data Barang</a>
+                <a href="{% url 'scan' %}" class="nav-link {% if active_page == 'scan' %}active{% endif %}">Scan</a>
+                <a href="{% url 'schedule_list' %}" class="nav-link {% if active_page == 'maintenance' %}active{% endif %}">Jadwal Maintenance</a>
+                <a href="{% url 'log_list' %}" class="nav-link {% if active_page == 'history' %}active{% endif %}">Riwayat Maintenance</a>
+                <a href="{% url 'report' %}" class="nav-link {% if active_page == 'report' %}active{% endif %}">Laporan</a>
+            </nav>
+        </div>
+    </header>
+
+    <div id="sidebarOverlay" onclick="closeSidebar()" class="fixed inset-0 bg-black/40 z-40 opacity-0 pointer-events-none transition-opacity duration-200 lg:hidden"></div>
+
+    <aside id="mobileSidebar" class="fixed top-0 left-0 h-full w-[290px] bg-white z-50 shadow-xl -translate-x-full transition-transform duration-200 lg:hidden flex flex-col">
+        <div class="flex items-center justify-between px-5 py-5">
+            <a href="{% url 'dashboard' %}" class="flex items-center">
+                <div class="ihc-logo">
+                    <img src="{% static 'assets/img/ihc.png' %}" alt="Logo IHC">
+                </div>
+            </a>
+
+            <button onclick="closeSidebar()" class="p-2 rounded-[8px] hover:bg-bg transition-colors" aria-label="Tutup menu">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5E6B7C" stroke-width="2" stroke-linecap="round">
+                    <line x1="4" y1="4" x2="20" y2="20"/>
+                    <line x1="20" y1="4" x2="4" y2="20"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="px-5 pb-3">
+            <span class="font-display text-[15px] font-semibold text-brand">Manajemen Alat</span>
+        </div>
+
+        <nav class="flex flex-col gap-1 px-4 py-3">
+            <a href="{% url 'dashboard' %}" class="sidebar-link {% if active_page == 'dashboard' %}active{% endif %}">Dashboard</a>
+            <a href="{% url 'scan' %}" class="sidebar-link {% if active_page == 'scan' %}active{% endif %}">Scan</a>
+            <a href="{% url 'equipment_list' %}" class="sidebar-link {% if active_page == 'equipment' %}active{% endif %}">Data Barang</a>
+            <a href="{% url 'schedule_list' %}" class="sidebar-link {% if active_page == 'maintenance' %}active{% endif %}">Maintenance</a>
+            <a href="{% url 'log_list' %}" class="sidebar-link {% if active_page == 'history' %}active{% endif %}">Riwayat</a>
+            <a href="{% url 'report' %}" class="sidebar-link {% if active_page == 'report' %}active{% endif %}">Laporan</a>
+        </nav>
+    </aside>
+
+    <main class="px-4 py-5 sm:px-6 sm:py-6 lg:py-7">
+        <div class="max-w-[1280px] mx-auto">
+            {% if messages %}
+                <div class="mb-5 space-y-2">
+                    {% for message in messages %}
+                        <div class="px-4 py-3 rounded-[10px] text-[13.5px] font-medium
+                            {% if message.tags == 'success' %}
+                                bg-[#E1F1E9] text-green
+                            {% elif message.tags == 'error' %}
+                                bg-[#F8E2E0] text-red
+                            {% else %}
+                                bg-[#E2E9F1] text-brand
+                            {% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <script src="{% static 'assets/js/scripts.js' %}"></script>
+</body>
+</html>
