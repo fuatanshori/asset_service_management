@@ -28,7 +28,7 @@ SECRET_KEY = os.environ.get(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["project.fuatanshori.com", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["project.fuatanshori.com", "localhost", "127.0.0.1","*"]
 CSRF_TRUSTED_ORIGINS = [
     "https://project.fuatanshori.com",
     "http://localhost:8000",

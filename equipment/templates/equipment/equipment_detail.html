@@ -85,7 +85,7 @@
       {% if equipment.status == "under_repair" or equipment.status == "scheduled" %}
       <span class="px-3.5 py-2 rounded-[10px] text-[12.5px] font-semibold text-muted bg-bg cursor-not-allowed" title="Barang sedang {{ equipment.get_status_display }}, tidak bisa ditambahkan jadwal baru">+ Tambah</span>
       {% else %}
-      <a href="{% url 'schedule_add' %}?equipment={{ equipment.pk }}" class="px-3.5 py-2 rounded-[10px] text-[12.5px] font-semibold text-white bg-ink hover:bg-brand-dark transition-colors">+ Tambah</a>
+      <a href="{% url 'schedule_add' %}?equipment={{ equipment.pk }}&next={{ request.get_full_path|urlencode }}" class="px-3.5 py-2 rounded-[10px] text-[12.5px] font-semibold text-white bg-ink hover:bg-brand-dark transition-colors">+ Tambah</a>
       {% endif %}
     </div>
     {% if schedule_list %}
@@ -117,15 +117,11 @@
               <td class="py-2.5 font-mono">{% if s.log %}Rp{{ s.log.cost|floatformat:0 }}{% else %}—{% endif %}</td>
               <td class="py-2.5">
                 <div class="flex gap-2 flex-wrap">
-                  {% if s.is_editable %}
-                  <a href="{% url 'schedule_edit' s.pk %}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-amber hover:opacity-90">Edit Jadwal</a>
-                  {% endif %}
+                  <a href="{% url 'schedule_edit' s.pk %}?next={{ request.get_full_path|urlencode }}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-amber hover:opacity-90">Edit Jadwal</a>
                   {% if s.log %}
-                  {% if s.is_editable %}
-                  <a href="{% url 'log_edit' s.log.pk %}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-brand hover:opacity-90">Edit Riwayat</a>
+                  <a href="{% url 'log_edit' s.log.pk %}?next={{ request.get_full_path|urlencode }}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-brand hover:opacity-90">Edit Riwayat</a>
                   {% endif %}
-                  {% endif %}
-                  <a href="{% url 'schedule_delete' s.pk %}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-red hover:opacity-90">Hapus</a>
+                  <a href="{% url 'schedule_delete' s.pk %}?next={{ request.get_full_path|urlencode }}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-red hover:opacity-90">Hapus</a>
                 </div>
               </td>
             </tr>

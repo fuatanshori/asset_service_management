@@ -11,6 +11,7 @@
     </p>
     <form method="post" class="flex justify-center gap-2.5">
       {% csrf_token %}
+      {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
       <button type="submit" class="px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-red hover:opacity-90 transition-colors">Ya, Hapus</button>
       <a href="{% url 'schedule_list' %}" class="px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Batal</a>
     </form>

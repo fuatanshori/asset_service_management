@@ -4,6 +4,53 @@ from django.utils import timezone
 from equipment.models import Equipment
 
 
+def get_latest_schedule_for_equipment(equipment):
+    """The schedule that currently "owns" the equipment's status — always
+    the most recently CREATED one (by created_at), regardless of which
+    schedule/log was most recently edited."""
+    return (
+        MaintenanceSchedule.objects.filter(equipment=equipment)
+        .order_by("-created_at", "-pk")
+        .first()
+    )
+
+
+def sync_equipment_status(equipment):
+    """Recompute equipment.status purely from the equipment's LATEST
+    SCHEDULE's log result — never from whichever log was most recently
+    edited/updated. This means editing an older schedule's log (any
+    field, including result) can never corrupt the equipment's current
+    status; only the newest schedule for that equipment is ever
+    consulted. Called both after any log save and after a schedule
+    delete."""
+    latest_schedule = get_latest_schedule_for_equipment(equipment)
+
+    if latest_schedule is None:
+        new_status = Equipment.STATUS_ACTIVE
+    else:
+        try:
+            log = latest_schedule.log
+        except MaintenanceLog.DoesNotExist:
+            log = None
+
+        if log is None:
+            new_status = Equipment.STATUS_ACTIVE
+        elif log.result == MaintenanceLog.RESULT_PENDING:
+            new_status = Equipment.STATUS_SCHEDULED
+        elif log.result == MaintenanceLog.RESULT_IN_PROGRESS:
+            new_status = Equipment.STATUS_UNDER_REPAIR
+        elif log.result == MaintenanceLog.RESULT_COMPLETED:
+            new_status = Equipment.STATUS_ACTIVE
+        elif log.result == MaintenanceLog.RESULT_FAILED:
+            new_status = Equipment.STATUS_DAMAGED
+        else:
+            new_status = Equipment.STATUS_ACTIVE
+
+    if equipment.status != new_status:
+        equipment.status = new_status
+        equipment.save(update_fields=["status", "updated_at"])
+
+
 class MaintenanceSchedule(models.Model):
     """A planned maintenance event for a piece of equipment.
 
@@ -15,11 +62,12 @@ class MaintenanceSchedule(models.Model):
     Two invariants are enforced automatically in save():
       1. scheduled_date and log.date are kept in sync in both directions
          (editing either one updates the other).
-      2. Changing maintenance_type re-triggers MaintenanceLog.save(),
-         because equipment status logic can depend on schedule type in
-         some deployments. Without this, switching a schedule's type
-         without also touching the date would silently fail to
-         re-evaluate the equipment's status.
+      2. Changing maintenance_type re-triggers MaintenanceLog.save(), so
+         status logic downstream always sees a consistent state.
+
+    is_editable only gates the `result` field in MaintenanceLogForm — it
+    does NOT block access to editing anything else. See
+    MaintenanceLog.is_editable for details.
     """
 
     TYPE_ROUTINE = "routine"
@@ -46,22 +94,20 @@ class MaintenanceSchedule(models.Model):
 
     def __str__(self):
         return f"{self.equipment.name} - {self.scheduled_date}"
-    
+
     @property
     def is_editable(self):
-        """Only the most recently created schedule for a given equipment
-        can be edited — older schedules become immutable history once a
-        newer one exists. Deletion is not affected by this; any schedule
-        can still be deleted regardless of age."""
-        latest_pk = (
-            MaintenanceSchedule.objects.filter(equipment_id=self.equipment_id)
-            .order_by("-created_at", "-pk")
-            .values_list("pk", flat=True)
-            .first()
-        )
-        return latest_pk == self.pk
-    
-    def save(self, *args, **kwargs):
+        """Whether this is the most recently created schedule for its
+        equipment. Only used to disable the `result` field in
+        MaintenanceLogForm — purely to avoid confusing/misleading
+        historical records. Does not gate access to editing anything
+        else; equipment.status is protected independently by
+        sync_equipment_status(), which always references the latest
+        schedule regardless of what gets edited."""
+        latest = get_latest_schedule_for_equipment(self.equipment)
+        return latest is not None and latest.pk == self.pk
+
+    def save(self, *args, skip_log_sync=False, **kwargs):
         is_new = self.pk is None
         old_scheduled_date = None
         old_maintenance_type = None
@@ -75,7 +121,7 @@ class MaintenanceSchedule(models.Model):
 
         if is_new:
             MaintenanceLog.objects.create(schedule=self, date=self.scheduled_date)
-        else:
+        elif not skip_log_sync:
             try:
                 log = self.log
             except MaintenanceLog.DoesNotExist:
@@ -87,20 +133,15 @@ class MaintenanceSchedule(models.Model):
                 if date_changed:
                     log.date = self.scheduled_date
                 if date_changed or type_changed:
-                    log.save()
+                    # skip_schedule_sync=True: log ini sudah pasti sinkron
+                    # dengan schedule (baru saja disamakan di atas), jadi
+                    # tidak perlu log.save() memicu schedule.save() lagi.
+                    log.save(skip_schedule_sync=True)
 
 
 class MaintenanceLog(models.Model):
     """The 1:1 actual maintenance record for a schedule, edited in place
     as work progresses (not a new row per update).
-
-    `result` is the single source of truth for the linked Equipment's
-    status:
-
-        pending      -> Equipment.STATUS_SCHEDULED
-        in_progress  -> Equipment.STATUS_UNDER_REPAIR
-        completed    -> Equipment.STATUS_ACTIVE
-        failed       -> Equipment.STATUS_DAMAGED
 
     `completed_date` is managed automatically:
       - First transition into completed/failed -> auto-filled with
@@ -109,13 +150,14 @@ class MaintenanceLog(models.Model):
         cleared back to None.
       - Any other save (result unchanged) leaves completed_date alone.
 
-    On every save(), this also writes `date` back to the parent
-    schedule's `scheduled_date` if they've diverged — the other half of
-    the bidirectional sync described in MaintenanceSchedule.save().
+    On every save(), equipment.status is recomputed via
+    sync_equipment_status() — which always reads from the equipment's
+    LATEST schedule, not necessarily this one. This makes it safe to
+    edit an older log's fields without accidentally corrupting the
+    equipment's current status.
 
-    NOTE: this is the agreed final version of this method — result maps
-    to equipment status unconditionally, regardless of maintenance_type.
-    Do not reintroduce a maintenance_type branch here.
+    date and the parent schedule's scheduled_date are kept in sync in
+    both directions.
     """
 
     RESULT_PENDING = "pending"
@@ -150,13 +192,7 @@ class MaintenanceLog(models.Model):
 
     def __str__(self):
         return f"{self.schedule.equipment.name} - {self.date}"
-    
-    @property
-    def is_editable(self):
-        """A log inherits editability from its schedule — see
-        MaintenanceSchedule.is_editable."""
-        return self.schedule.is_editable
-    
+
     @property
     def result_color(self):
         return {
@@ -166,7 +202,13 @@ class MaintenanceLog(models.Model):
             self.RESULT_FAILED: "red",
         }.get(self.result, "muted")
 
-    def save(self, *args, **kwargs):
+    @property
+    def is_editable(self):
+        """See MaintenanceSchedule.is_editable — inherited from the
+        parent schedule."""
+        return self.schedule.is_editable
+
+    def save(self, *args, skip_schedule_sync=False, **kwargs):
         completion_results = (self.RESULT_COMPLETED, self.RESULT_FAILED)
 
         old = None
@@ -183,58 +225,15 @@ class MaintenanceLog(models.Model):
 
         super().save(*args, **kwargs)
 
-        equipment = self.schedule.equipment
+        # Status barang selalu dihitung dari jadwal TERBARU milik barang
+        # ini — bukan dari log yang baru saja disimpan.
+        sync_equipment_status(self.schedule.equipment)
 
-        if self.result == self.RESULT_PENDING:
-            new_status = Equipment.STATUS_SCHEDULED
-        elif self.result == self.RESULT_IN_PROGRESS:
-            new_status = Equipment.STATUS_UNDER_REPAIR
-        elif self.result == self.RESULT_COMPLETED:
-            new_status = Equipment.STATUS_ACTIVE
-        elif self.result == self.RESULT_FAILED:
-            new_status = Equipment.STATUS_DAMAGED
-        else:
-            new_status = None
-
-        if new_status and equipment.status != new_status:
-            equipment.status = new_status
-            equipment.save(update_fields=["status", "updated_at"])
-
-        schedule = self.schedule
-        if schedule.scheduled_date != self.date:
-            schedule.scheduled_date = self.date
-            schedule.save()
-
-
-def sync_equipment_status_from_remaining_logs(equipment):
-    """Recompute equipment.status after a schedule is deleted — necessary
-    because equipment.status is a derived field that any of the
-    equipment's multiple schedules could have last written. An "open"
-    (not completed/failed) log always takes priority over resolved ones,
-    since it represents work that's still ongoing. If nothing remains at
-    all, the equipment is considered Active."""
-    logs = MaintenanceLog.objects.filter(schedule__equipment=equipment)
-
-    open_log = (
-        logs.exclude(result__in=[MaintenanceLog.RESULT_COMPLETED, MaintenanceLog.RESULT_FAILED])
-        .order_by("-updated_at")
-        .first()
-    )
-    reference_log = open_log or logs.order_by("-updated_at").first()
-
-    if reference_log is None:
-        new_status = Equipment.STATUS_ACTIVE
-    elif reference_log.result == MaintenanceLog.RESULT_PENDING:
-        new_status = Equipment.STATUS_SCHEDULED
-    elif reference_log.result == MaintenanceLog.RESULT_IN_PROGRESS:
-        new_status = Equipment.STATUS_UNDER_REPAIR
-    elif reference_log.result == MaintenanceLog.RESULT_COMPLETED:
-        new_status = Equipment.STATUS_ACTIVE
-    elif reference_log.result == MaintenanceLog.RESULT_FAILED:
-        new_status = Equipment.STATUS_DAMAGED
-    else:
-        new_status = Equipment.STATUS_ACTIVE
-
-    if equipment.status != new_status:
-        equipment.status = new_status
-        equipment.save(update_fields=["status", "updated_at"])
+        if not skip_schedule_sync:
+            schedule = self.schedule
+            if schedule.scheduled_date != self.date:
+                schedule.scheduled_date = self.date
+                # skip_log_sync=True: schedule ini sudah pasti sinkron
+                # dengan log (baru saja disamakan di atas), jadi tidak
+                # perlu schedule.save() memicu log.save() lagi.
+                schedule.save(skip_log_sync=True)

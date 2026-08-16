@@ -78,12 +78,8 @@
             <td class="px-4 py-3 text-[13px] font-mono">{{ s.log.completed_date|date:"d-m-Y"|default:"—" }}</td>
             <td class="px-4 py-3">
               <div class="flex gap-2 flex-wrap">
-                {% if s.is_editable %}
                 <a href="{% url 'log_edit' s.log.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-green hover:opacity-90">Edit Riwayat</a>
-                {% endif %}
-                {% if s.is_editable %}
                 <a href="{% url 'schedule_edit' s.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-amber hover:opacity-90">Edit Jadwal</a>
-                {% endif %}
                 <a href="{% url 'schedule_delete' s.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-red hover:opacity-90">Hapus</a>
               </div>
             </td>

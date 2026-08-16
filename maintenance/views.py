@@ -4,11 +4,24 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from openpyxl import Workbook
 
 from equipment.models import Equipment
 from .forms import LogFilterForm, MaintenanceLogForm, MaintenanceScheduleForm, ScheduleFilterForm
-from .models import MaintenanceLog, MaintenanceSchedule, sync_equipment_status_from_remaining_logs
+from .models import MaintenanceLog, MaintenanceSchedule, sync_equipment_status
+
+
+def _safe_next_url(request, fallback):
+    """Balik ke URL asal (dikirim lewat POST/GET field "next") kalau ada
+    dan aman (nggak diarahin ke domain luar) — kalau nggak ada, pakai
+    fallback default."""
+    next_url = request.POST.get("next") or request.GET.get("next")
+    if next_url and url_has_allowed_host_and_scheme(
+        next_url, allowed_hosts={request.get_host()}, require_https=request.is_secure()
+    ):
+        return next_url
+    return fallback
 
 
 # ---------- Export helpers (dipakai bareng schedule_export & reports.report_export_full) ----------
@@ -62,9 +75,9 @@ def schedule_list(request):
 
 
 def schedule_add(request):
-    """Buat jadwal baru. Riwayatnya (MaintenanceLog) otomatis dibuat kosong
-    di belakang layar (untuk relasi 1:1), TAPI tidak dipaksa diisi sekarang
-    juga — cuma opsi, bisa diisi kapan saja lewat "Edit Riwayat"."""
+    """Buat jadwal baru. Default balik ke daftar Jadwal — TAPI kalau
+    diakses dengan ?next=<url>, balik ke situ (misal dari halaman Detail
+    Barang)."""
     initial = {}
     equipment_id = request.GET.get("equipment")
     selected_equipment = None
@@ -78,7 +91,7 @@ def schedule_add(request):
                 f'Barang "{selected_equipment.name}" sedang berstatus '
                 f'"{selected_equipment.get_status_display()}" — tidak bisa ditambahkan jadwal baru.',
             )
-            return redirect("equipment:equipment_detail", pk=selected_equipment.pk)
+            return redirect(_safe_next_url(request, reverse("equipment_detail", args=[selected_equipment.pk])))
         initial["equipment"] = equipment_id
     if request.GET.get("type") == "repair":
         initial["maintenance_type"] = MaintenanceSchedule.TYPE_REPAIR
@@ -92,7 +105,7 @@ def schedule_add(request):
                 'Jadwal maintenance berhasil ditambahkan. Status barang otomatis "Dijadwalkan" — '
                 'riwayat pengerjaan bisa diisi kapan saja lewat tombol "Edit Riwayat".',
             )
-            return redirect("schedule_list")
+            return redirect(_safe_next_url(request, reverse("schedule_list")))
     else:
         form = MaintenanceScheduleForm(initial=initial)
     return render(
@@ -103,26 +116,21 @@ def schedule_add(request):
             "active_page": "maintenance",
             "mode": "add",
             "selected_equipment_label": str(selected_equipment) if selected_equipment else "",
+            "next_url": request.GET.get("next", ""),
         },
     )
 
 
 def schedule_edit(request, pk):
+    """Default balik ke daftar Jadwal, kecuali diakses dengan
+    ?next=<url> (misal dari Detail Barang)."""
     schedule = get_object_or_404(MaintenanceSchedule, pk=pk)
-    if not schedule.is_editable:
-        messages.error(
-            request,
-            f'Jadwal untuk "{schedule.equipment.name}" ini bukan yang terbaru — '
-            "data lama bersifat arsip dan tidak bisa diedit lagi (masih bisa dihapus).",
-        )
-        return redirect("schedule_list")
-
     if request.method == "POST":
         form = MaintenanceScheduleForm(request.POST, instance=schedule)
         if form.is_valid():
             form.save()
             messages.success(request, "Jadwal maintenance berhasil diperbarui.")
-            return redirect("schedule_list")
+            return redirect(_safe_next_url(request, reverse("schedule_list")))
     else:
         form = MaintenanceScheduleForm(instance=schedule)
     return render(
@@ -134,29 +142,29 @@ def schedule_edit(request, pk):
             "mode": "edit",
             "schedule": schedule,
             "selected_equipment_label": str(schedule.equipment),
+            "next_url": request.GET.get("next", ""),
         },
     )
 
 
 def schedule_delete(request, pk):
-    """Hapus jadwal (riwayatnya ikut kehapus via cascade). Status barang
-    dihitung ulang dari jadwal-jadwal lain yang masih tersisa untuk
-    equipment yang sama."""
+    """Hapus jadwal. Default balik ke daftar Jadwal, kecuali diakses
+    dengan ?next=<url>."""
     schedule = MaintenanceSchedule.objects.filter(pk=pk).first()
     if schedule is None:
         messages.warning(request, "Jadwal ini sudah tidak ada (mungkin sudah dihapus sebelumnya).")
-        return redirect("schedule_list")
+        return redirect(_safe_next_url(request, reverse("schedule_list")))
 
     if request.method == "POST":
         equipment = schedule.equipment
         schedule.delete()
-        sync_equipment_status_from_remaining_logs(equipment)
+        sync_equipment_status(equipment)
         messages.success(request, "Jadwal maintenance berhasil dihapus.")
-        return redirect("schedule_list")
+        return redirect(_safe_next_url(request, reverse("schedule_list")))
     return render(
         request,
         "maintenance/schedule_confirm_delete.html",
-        {"schedule": schedule, "active_page": "maintenance"},
+        {"schedule": schedule, "active_page": "maintenance", "next_url": request.GET.get("next", "")},
     )
 
 
@@ -222,25 +230,19 @@ def log_list(request):
 
 
 def log_edit(request, pk):
+    """Default balik ke daftar Riwayat, kecuali diakses dengan
+    ?next=<url> (misal dari Detail Barang atau daftar Jadwal)."""
     log = get_object_or_404(MaintenanceLog, pk=pk)
-    if not log.is_editable:
-        messages.error(
-            request,
-            f'Riwayat untuk "{log.schedule.equipment.name}" ini bukan yang terbaru — '
-            "data lama bersifat arsip dan tidak bisa diedit lagi (masih bisa dihapus).",
-        )
-        return redirect("schedule_list")
-
     if request.method == "POST":
         form = MaintenanceLogForm(request.POST, request.FILES, instance=log)
         if form.is_valid():
             form.save()
             messages.success(request, "Riwayat maintenance berhasil diperbarui.")
-            return redirect("schedule_list")
+            return redirect(_safe_next_url(request, reverse("log_list")))
     else:
         form = MaintenanceLogForm(instance=log)
     return render(
         request,
         "maintenance/log_form.html",
-        {"form": form, "active_page": "history", "schedule": log.schedule},
+        {"form": form, "active_page": "history", "schedule": log.schedule, "next_url": request.GET.get("next", "")},
     )

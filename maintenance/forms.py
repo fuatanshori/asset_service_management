@@ -1,6 +1,5 @@
-#maintenance/forms.py
-
 from django import forms
+
 from equipment.models import Equipment
 from .models import MaintenanceLog, MaintenanceSchedule
 
@@ -8,6 +7,13 @@ INPUT_CLASS = "field-input"
 
 
 class MaintenanceScheduleForm(forms.ModelForm):
+    """Add/edit form for MaintenanceSchedule.
+
+    `equipment` is rendered as a HiddenInput because the template pairs
+    it with a JS search-as-you-type picker (see equipment_search view in
+    the equipment app) rather than a plain <select>.
+    """
+
     class Meta:
         model = MaintenanceSchedule
         fields = ["equipment", "scheduled_date", "maintenance_type", "notes"]
@@ -18,15 +24,10 @@ class MaintenanceScheduleForm(forms.ModelForm):
             "notes": forms.Textarea(attrs={"class": INPUT_CLASS, "rows": 3}),
         }
 
-    def clean(self):
-        cleaned_data = super().clean()
-        if self.instance.pk and not self.instance.is_editable:
-            raise forms.ValidationError(
-                "Jadwal ini bukan jadwal terbaru untuk barang ini — sudah menjadi arsip, tidak bisa diedit."
-            )
-        return cleaned_data
-
     def clean_equipment(self):
+        """Block scheduling a new maintenance event for equipment that's
+        already mid-schedule (status "scheduled" or "under_repair") —
+        prevents double-booking. Only applies to NEW schedules."""
         equipment = self.cleaned_data.get("equipment")
         if not self.instance.pk and equipment and equipment.status in (
             Equipment.STATUS_UNDER_REPAIR, Equipment.STATUS_SCHEDULED
@@ -40,6 +41,8 @@ class MaintenanceScheduleForm(forms.ModelForm):
 
 
 class ScheduleFilterForm(forms.Form):
+    """Non-model filter form for the schedule list view."""
+
     q = forms.CharField(required=False, label="Cari")
     maintenance_type = forms.ChoiceField(
         required=False, choices=[("", "Semua")] + MaintenanceSchedule.TYPE_CHOICES
@@ -52,8 +55,18 @@ class ScheduleFilterForm(forms.Form):
 
 
 class MaintenanceLogForm(forms.ModelForm):
-    """Ngedit riwayat (1:1) milik sebuah schedule — schedule-nya sendiri
-    gak bisa diganti dari sini, implisit dari mana form ini dipanggil."""
+    """Edit form for a MaintenanceLog. There is no "add" counterpart —
+    every log is created automatically alongside its schedule. `schedule`
+    is intentionally excluded from `fields`.
+
+    The `result` field is disabled (read-only) when this log is not the
+    equipment's latest — everything else stays freely editable. This
+    only prevents accidentally re-flagging old, already-resolved work as
+    "in progress" again; it does not protect equipment.status by itself
+    (that's handled independently by sync_equipment_status() in
+    models.py, which always reads from the latest schedule regardless).
+    """
+
     class Meta:
         model = MaintenanceLog
         fields = [
@@ -72,16 +85,15 @@ class MaintenanceLogForm(forms.ModelForm):
             "photo_receipt": forms.ClearableFileInput(attrs={"class": INPUT_CLASS}),
         }
 
-    def clean(self):
-        cleaned_data = super().clean()
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         if self.instance.pk and not self.instance.is_editable:
-            raise forms.ValidationError(
-                "Riwayat ini bukan riwayat terbaru untuk barang ini — sudah menjadi arsip, tidak bisa diedit."
-            )
-        return cleaned_data
+            self.fields["result"].disabled = True
 
 
 class LogFilterForm(forms.Form):
+    """Non-model filter form for the log (riwayat) list view."""
+
     q = forms.CharField(required=False, label="Cari")
     result = forms.ChoiceField(required=False, choices=[("", "Semua")] + MaintenanceLog.RESULT_CHOICES)
     year = forms.CharField(required=False)
