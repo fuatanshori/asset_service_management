@@ -1,6 +1,5 @@
 # reports/analytics.py
 
-from datetime import date
 from django.db.models import Avg, Count, Q, Sum
 from django.db.models.functions import TruncMonth
 from equipment.models import Equipment
@@ -66,7 +65,7 @@ def get_result_breakdown(date_from=None, date_to=None):
 
 
 def get_overdue_schedules(limit=8):
-    today = date.today()
+    today = timezone.localdate()
     qs = (
         MaintenanceSchedule.objects.select_related("equipment", "log")
         .filter(scheduled_date__lt=today)

@@ -24,6 +24,24 @@ def _safe_next_url(request, fallback):
     return fallback
 
 
+def _active_page_for_next(request, default):
+    """Tab navbar yang nyala ngikutin halaman ASAL (dari next=...), bukan
+    selalu jenis form yang lagi dibuka. Jadi kalau lagi kerja di Data
+    Barang terus edit/hapus Jadwal atau Riwayat terkait, tab "Data Barang"
+    tetap nyala — nggak loncat ke "Jadwal Maintenance"/"Riwayat
+    Maintenance". Kalau tidak ada next (akses langsung), pakai default
+    sesuai jenis form."""
+    next_url = request.POST.get("next") or request.GET.get("next") or ""
+    path = next_url.split("?")[0]
+    if path.startswith("/equipment/"):
+        return "equipment"
+    if path.startswith("/schedules/"):
+        return "maintenance"
+    if path.startswith("/logs/"):
+        return "history"
+    return default
+
+
 # ---------- Export helpers (dipakai bareng schedule_export & reports.report_export_full) ----------
 
 SCHEDULE_EXPORT_HEADERS = [
@@ -113,7 +131,7 @@ def schedule_add(request):
         "maintenance/schedule_form.html",
         {
             "form": form,
-            "active_page": "maintenance",
+            "active_page": _active_page_for_next(request, "maintenance"),
             "mode": "add",
             "selected_equipment_label": str(selected_equipment) if selected_equipment else "",
             "next_url": request.GET.get("next", ""),
@@ -138,7 +156,7 @@ def schedule_edit(request, pk):
         "maintenance/schedule_form.html",
         {
             "form": form,
-            "active_page": "maintenance",
+            "active_page": _active_page_for_next(request, "maintenance"),
             "mode": "edit",
             "schedule": schedule,
             "selected_equipment_label": str(schedule.equipment),
@@ -164,7 +182,11 @@ def schedule_delete(request, pk):
     return render(
         request,
         "maintenance/schedule_confirm_delete.html",
-        {"schedule": schedule, "active_page": "maintenance", "next_url": request.GET.get("next", "")},
+        {
+            "schedule": schedule,
+            "active_page": _active_page_for_next(request, "maintenance"),
+            "next_url": request.GET.get("next", ""),
+        },
     )
 
 
@@ -244,5 +266,10 @@ def log_edit(request, pk):
     return render(
         request,
         "maintenance/log_form.html",
-        {"form": form, "active_page": "history", "schedule": log.schedule, "next_url": request.GET.get("next", "")},
+        {
+            "form": form,
+            "active_page": _active_page_for_next(request, "history"),
+            "schedule": log.schedule,
+            "next_url": request.GET.get("next", ""),
+        },
     )

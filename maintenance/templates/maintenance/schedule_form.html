@@ -3,14 +3,14 @@
 {% block title %}{% if mode == "edit" %}Edit Jadwal{% else %}Tambah Jadwal{% endif %}{% endblock %}
 {% block content %}
 
-  <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+  <div class="flex flex-wrap justify-between items-center gap-4 mb-6 max-w-[720px] mx-auto">
     <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">
       {% if mode == "edit" %}Edit Jadwal Maintenance{% else %}Tambah Jadwal Maintenance{% endif %}
     </h1>
-    <a href="{% url 'schedule_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Kembali</a>
+    <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'schedule_list' %}{% endif %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Kembali</a>
   </div>
 
-  <form method="post" class="bg-white border border-line rounded-xl2 p-5 sm:p-6 max-w-[720px]">
+  <form method="post" class="bg-white border border-line rounded-xl2 p-5 sm:p-6 max-w-[720px] mx-auto">
     {% csrf_token %}
     {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -37,7 +37,7 @@
     </div>
     <div class="flex gap-2.5 mt-6">
       <button type="submit" class="px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Simpan</button>
-      <a href="{% url 'schedule_list' %}" class="px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Batal</a>
+      <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'schedule_list' %}{% endif %}" class="px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Batal</a>
     </div>
   </form>
 
