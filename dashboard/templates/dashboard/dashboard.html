@@ -1,0 +1,283 @@
+{# dashboard/templates/dashboard/dashboard.html #}
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+
+  <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
+    <div>
+      <span class="block font-mono text-[11px] tracking-[0.08em] uppercase text-brand mb-1.5">
+        Ringkasan · Hari ini
+      </span>
+      <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">Dashboard Monitoring</h1>
+    </div>
+    <div class="flex gap-2.5 w-full sm:w-auto">
+      <a href="{% url 'schedule_add' %}"
+         class="flex-1 sm:flex-none text-center px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line
+                bg-white hover:border-brand hover:text-brand transition-colors">
+        + Tambah Jadwal
+      </a>
+      <a href="{% url 'equipment_add' %}"
+         class="flex-1 sm:flex-none text-center px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white
+                bg-brand hover:bg-brand-dark active:translate-y-px transition-colors">
+        + Tambah Barang
+      </a>
+    </div>
+  </div>
+
+  {% if overdue_count > 0 %}
+  <div class="bg-[#F8E2E0] border border-red/30 rounded-xl2 p-4 sm:p-5 mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <span class="text-xl">⚠️</span>
+      <p class="text-[13.5px] font-semibold text-red">
+        {{ overdue_count }} jadwal maintenance sudah lewat tanggal tapi belum kelar.
+      </p>
+    </div>
+    <a href="{% url 'schedule_list' %}" class="px-3.5 py-2 rounded-[10px] text-[12.5px] font-semibold text-white bg-red hover:opacity-90 transition-colors">Lihat Semua</a>
+  </div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-7">
+    <div class="tag-notch relative bg-white border border-line rounded-xl2 pl-[18px] pr-[18px] pt-[18px] pb-4 overflow-hidden">
+      <div class="absolute left-0 top-0 bottom-0 w-1 bg-brand"></div>
+      <div class="ml-3.5 w-[34px] h-[34px] rounded-[9px] bg-[#E2E9F1] text-brand flex items-center justify-center text-base">▦</div>
+      <div class="ml-3.5 mt-3.5 font-mono text-[28px] sm:text-[30px] font-semibold tracking-tight">{{ total_equipment }}</div>
+      <div class="ml-3.5 text-[12.5px] font-medium text-muted">Total barang</div>
+    </div>
+
+    <div class="tag-notch relative bg-white border border-line rounded-xl2 pl-[18px] pr-[18px] pt-[18px] pb-4 overflow-hidden">
+      <div class="absolute left-0 top-0 bottom-0 w-1 bg-green"></div>
+      <div class="ml-3.5 w-[34px] h-[34px] rounded-[9px] bg-[#E1F1E9] text-green flex items-center justify-center text-base">✓</div>
+      <div class="ml-3.5 mt-3.5 font-mono text-[28px] sm:text-[30px] font-semibold tracking-tight">{{ equipment_active }}</div>
+      <div class="ml-3.5 text-[12.5px] font-medium text-muted">Barang aktif</div>
+    </div>
+
+    <div class="tag-notch relative bg-white border border-line rounded-xl2 pl-[18px] pr-[18px] pt-[18px] pb-4 overflow-hidden">
+      <div class="absolute left-0 top-0 bottom-0 w-1 bg-brand"></div>
+      <div class="ml-3.5 w-[34px] h-[34px] rounded-[9px] bg-[#E2E9F1] text-brand flex items-center justify-center text-base">🗓️</div>
+      <div class="ml-3.5 mt-3.5 font-mono text-[28px] sm:text-[30px] font-semibold tracking-tight">{{ equipment_scheduled }}</div>
+      <div class="ml-3.5 text-[12.5px] font-medium text-muted">Dijadwalkan</div>
+    </div>
+
+    <div class="tag-notch relative bg-white border border-line rounded-xl2 pl-[18px] pr-[18px] pt-[18px] pb-4 overflow-hidden">
+      <div class="absolute left-0 top-0 bottom-0 w-1 bg-amber"></div>
+      <div class="ml-3.5 w-[34px] h-[34px] rounded-[9px] bg-[#F7E9D8] text-amber flex items-center justify-center text-base">⚙</div>
+      <div class="ml-3.5 mt-3.5 font-mono text-[28px] sm:text-[30px] font-semibold tracking-tight">{{ equipment_under_repair }}</div>
+      <div class="ml-3.5 text-[12.5px] font-medium text-muted">Dalam perbaikan</div>
+    </div>
+
+    <div class="tag-notch relative bg-white border border-line rounded-xl2 pl-[18px] pr-[18px] pt-[18px] pb-4 overflow-hidden">
+      <div class="absolute left-0 top-0 bottom-0 w-1 bg-red"></div>
+      <div class="ml-3.5 w-[34px] h-[34px] rounded-[9px] bg-[#F8E2E0] text-red flex items-center justify-center text-base">!</div>
+      <div class="ml-3.5 mt-3.5 font-mono text-[28px] sm:text-[30px] font-semibold tracking-tight">{{ equipment_damaged }}</div>
+      <div class="ml-3.5 text-[12.5px] font-medium text-muted">Barang rusak</div>
+    </div>
+  </div>
+
+  <!-- Jadwal Perawatan Terdekat -->
+  <div class="bg-white border border-line rounded-xl2 overflow-hidden mb-6">
+    <div class="flex flex-wrap justify-between items-center gap-3 px-5 sm:px-[22px] pt-[18px] pb-3.5">
+      <h2 class="font-display text-[16.5px] font-semibold">Jadwal Perawatan Terdekat</h2>
+      <a href="{% url 'schedule_list' %}" class="px-3.5 py-2 rounded-[10px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Lihat Semua</a>
+    </div>
+    <div class="barcode-strip mx-5 sm:mx-[22px]"></div>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[560px] border-collapse mt-1.5">
+        <thead>
+          <tr>
+            <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-5 sm:px-[22px] pt-3.5 pb-2.5">Tanggal</th>
+            <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-5 sm:px-[22px] pt-3.5 pb-2.5">Barang</th>
+            <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-5 sm:px-[22px] pt-3.5 pb-2.5">Merk / Tipe</th>
+            <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-5 sm:px-[22px] pt-3.5 pb-2.5">Jenis</th>
+            <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-5 sm:px-[22px] pt-3.5 pb-2.5">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in upcoming_schedules %}
+          <tr class="border-t border-line">
+            <td class="px-5 sm:px-[22px] py-3 text-[13px] font-mono">{{ s.scheduled_date|date:"d-m-Y" }}</td>
+            <td class="px-5 sm:px-[22px] py-3 text-[13px] font-semibold">
+              <a href="{% url 'equipment_detail' s.equipment.pk %}" class="hover:text-brand">{{ s.equipment.name }}{% if s.equipment.serial_number %} <span class="text-muted font-normal">({{ s.equipment.serial_number }})</span>{% endif %}</a>
+            </td>
+            <td class="px-5 sm:px-[22px] py-3 text-[13px]">{{ s.equipment.brand }} / {{ s.equipment.model_type }}</td>
+            <td class="px-5 sm:px-[22px] py-3 text-[13px]">{{ s.get_maintenance_type_display }}</td>
+            <td class="px-5 sm:px-[22px] py-3">
+              {% if s.log %}
+                <span class="badge badge-{{ s.log.result_color }}">{{ s.log.get_result_display }}</span>
+              {% else %}
+                <span class="badge badge-brand">Dijadwalkan</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center px-5 sm:px-[22px] pt-11 pb-12 text-[13.5px] text-muted border-t border-line">
+              <div class="w-[38px] h-[38px] mx-auto mb-3 rounded-[10px] border-[1.5px] border-dashed border-line flex items-center justify-center text-line font-mono text-[15px]">···</div>
+              Belum ada jadwal maintenance.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Ringkasan biaya (tidak difilter) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+    <div class="bg-white border border-line rounded-xl2 p-4">
+      <div class="text-[11.5px] font-medium text-muted mb-1">Biaya Bulan Ini</div>
+      <div class="font-mono text-[20px] font-semibold">Rp{{ cost_summary.this_month|floatformat:0 }}</div>
+    </div>
+    <div class="bg-white border border-line rounded-xl2 p-4">
+      <div class="text-[11.5px] font-medium text-muted mb-1">Biaya Tahun Ini</div>
+      <div class="font-mono text-[20px] font-semibold">Rp{{ cost_summary.this_year|floatformat:0 }}</div>
+    </div>
+    <div class="bg-white border border-line rounded-xl2 p-4">
+      <div class="text-[11.5px] font-medium text-muted mb-1">Total Biaya (Semua)</div>
+      <div class="font-mono text-[20px] font-semibold">Rp{{ cost_summary.all_time|floatformat:0 }}</div>
+    </div>
+    <div class="bg-white border border-line rounded-xl2 p-4">
+      <div class="text-[11.5px] font-medium text-muted mb-1">Rata-rata / Servis</div>
+      <div class="font-mono text-[20px] font-semibold">Rp{{ cost_summary.avg_per_service|floatformat:0 }}</div>
+    </div>
+  </div>
+
+  <!-- Biaya per Bulan (filter sendiri) -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+      <div class="flex flex-wrap justify-between items-start gap-3 mb-4">
+        <h2 class="font-display text-[16px] font-semibold">💰 Biaya Maintenance per Bulan</h2>
+      </div>
+      <form method="get" class="flex flex-wrap items-end gap-2 mb-4">
+        {% for k, v in cost_preserve_params %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+        <div><label class="text-[11px] text-muted block mb-1">{{ cost_filter.date_from.label }}</label>{{ cost_filter.date_from }}</div>
+        <div><label class="text-[11px] text-muted block mb-1">{{ cost_filter.date_to.label }}</label>{{ cost_filter.date_to }}</div>
+        <button type="submit" class="px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
+      </form>
+      <canvas id="costChart" height="220"></canvas>
+    </div>
+
+    <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+      <h2 class="font-display text-[16px] font-semibold mb-4">📊 Status Barang</h2>
+      <canvas id="statusChart" height="220"></canvas>
+      <p class="text-[11.5px] text-muted mt-3">Kondisi terkini — tidak difilter tanggal.</p>
+    </div>
+  </div>
+
+  <!-- Jenis Perawatan & Hasil Kerja (filter sendiri-sendiri) -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+      <h2 class="font-display text-[16px] font-semibold mb-4">🔧 Jenis Perawatan</h2>
+      <form method="get" class="flex flex-wrap items-end gap-2 mb-4">
+        {% for k, v in type_preserve_params %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+        <div><label class="text-[11px] text-muted block mb-1">{{ type_filter.date_from.label }}</label>{{ type_filter.date_from }}</div>
+        <div><label class="text-[11px] text-muted block mb-1">{{ type_filter.date_to.label }}</label>{{ type_filter.date_to }}</div>
+        <button type="submit" class="px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
+      </form>
+      <canvas id="typeChart" height="200"></canvas>
+    </div>
+
+    <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+      <h2 class="font-display text-[16px] font-semibold mb-4">✅ Hasil Kerja</h2>
+      <form method="get" class="flex flex-wrap items-end gap-2 mb-4">
+        {% for k, v in result_preserve_params %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+        <div><label class="text-[11px] text-muted block mb-1">{{ result_filter.date_from.label }}</label>{{ result_filter.date_from }}</div>
+        <div><label class="text-[11px] text-muted block mb-1">{{ result_filter.date_to.label }}</label>{{ result_filter.date_to }}</div>
+        <button type="submit" class="px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
+      </form>
+      <canvas id="resultChart" height="200"></canvas>
+    </div>
+  </div>
+
+  <!-- Barang Paling Sering Diservis & Teknisi Paling Aktif (filter + limit + detail lengkap) -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+      <h2 class="font-display text-[16px] font-semibold mb-4">🔁 Barang Paling Sering Diservis</h2>
+      <form method="get" class="flex flex-wrap items-end gap-2 mb-4">
+        {% for k, v in topeq_preserve_params %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+        <div><label class="text-[11px] text-muted block mb-1">{{ topeq_filter.date_from.label }}</label>{{ topeq_filter.date_from }}</div>
+        <div><label class="text-[11px] text-muted block mb-1">{{ topeq_filter.date_to.label }}</label>{{ topeq_filter.date_to }}</div>
+        <div><label class="text-[11px] text-muted block mb-1">{{ topeq_filter.limit.label }}</label>{{ topeq_filter.limit }}</div>
+        <button type="submit" class="px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
+      </form>
+      {% if top_serviced_equipment %}
+        <ul class="divide-y divide-line">
+          {% for item in top_serviced_equipment %}
+          <li class="py-2.5 flex justify-between items-center text-[13.5px]">
+            <a href="{% url 'equipment_detail' item.pk %}" class="hover:text-brand font-medium">
+              {{ item.name }}{% if item.serial_number %} <span class="text-muted font-normal">· SN: {{ item.serial_number }}</span>{% endif %}
+            </a>
+            <span class="badge badge-amber">{{ item.service_count }}x servis</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <a href="{% url 'equipment_service_ranking' %}" class="inline-block mt-3 text-[12.5px] font-semibold text-brand hover:underline">Lihat Detail Lengkap →</a>
+      {% else %}
+        <p class="text-[13.5px] text-muted">Belum ada data servis.</p>
+      {% endif %}
+    </div>
+
+    <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+      <h2 class="font-display text-[16px] font-semibold mb-4">👨‍🔧 Teknisi Paling Aktif</h2>
+      <form method="get" class="flex flex-wrap items-end gap-2 mb-4">
+        {% for k, v in toptech_preserve_params %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+        <div><label class="text-[11px] text-muted block mb-1">{{ toptech_filter.date_from.label }}</label>{{ toptech_filter.date_from }}</div>
+        <div><label class="text-[11px] text-muted block mb-1">{{ toptech_filter.date_to.label }}</label>{{ toptech_filter.date_to }}</div>
+        <div><label class="text-[11px] text-muted block mb-1">{{ toptech_filter.limit.label }}</label>{{ toptech_filter.limit }}</div>
+        <button type="submit" class="px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
+      </form>
+      {% if top_technicians %}
+        <ul class="divide-y divide-line">
+          {% for t in top_technicians %}
+          <li class="py-2.5 flex justify-between items-center text-[13.5px]">
+            <span class="font-medium">{{ t.technician }}</span>
+            <span class="text-muted">{{ t.total }}x · Rp{{ t.total_cost|floatformat:0 }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        <a href="{% url 'technician_ranking' %}" class="inline-block mt-3 text-[12.5px] font-semibold text-brand hover:underline">Lihat Detail Lengkap →</a>
+      {% else %}
+        <p class="text-[13.5px] text-muted">Belum ada data teknisi.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Kelengkapan data -->
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-4">
+    <h2 class="font-display text-[16px] font-semibold mb-4">📋 Kelengkapan Data Barang</h2>
+    <div class="space-y-3">
+      <div>
+        <div class="flex justify-between text-[12.5px] mb-1"><span class="text-muted">Punya Foto</span><span class="font-semibold">{{ data_completeness.with_photo_pct }}%</span></div>
+        <div class="h-2 bg-bg rounded-full overflow-hidden"><div class="h-full bg-brand" style="width: {{ data_completeness.with_photo_pct }}%"></div></div>
+      </div>
+      <div>
+        <div class="flex justify-between text-[12.5px] mb-1"><span class="text-muted">Punya Titik Lokasi</span><span class="font-semibold">{{ data_completeness.with_location_pct }}%</span></div>
+        <div class="h-2 bg-bg rounded-full overflow-hidden"><div class="h-full bg-green" style="width: {{ data_completeness.with_location_pct }}%"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script>
+    new Chart(document.getElementById('costChart'), {
+      type: 'bar',
+      data: { labels: {{ chart_labels_json|safe }}, datasets: [{ label: 'Biaya (Rp)', data: {{ chart_values_json|safe }}, backgroundColor: '#2A5C8A', borderRadius: 6 }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+    });
+    new Chart(document.getElementById('statusChart'), {
+      type: 'doughnut',
+      data: { labels: ['Aktif', 'Dijadwalkan', 'Dalam Perbaikan', 'Rusak'], datasets: [{ data: {{ status_chart_json|safe }}, backgroundColor: ['#328A63', '#2A5C8A', '#C97A2E', '#C0483F'] }] },
+      options: { plugins: { legend: { position: 'bottom' } } },
+    });
+    new Chart(document.getElementById('typeChart'), {
+      type: 'bar',
+      data: { labels: {{ type_labels_json|safe }}, datasets: [{ data: {{ type_values_json|safe }}, backgroundColor: '#2A5C8A', borderRadius: 6 }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } },
+    });
+    new Chart(document.getElementById('resultChart'), {
+      type: 'doughnut',
+      data: { labels: {{ result_labels_json|safe }}, datasets: [{ data: {{ result_values_json|safe }}, backgroundColor: ['#328A63', '#C97A2E', '#C0483F', '#2A5C8A'] }] },
+      options: { plugins: { legend: { position: 'bottom' } } },
+    });
+  </script>
+
+{% endblock %}
