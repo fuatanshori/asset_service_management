@@ -1,0 +1,187 @@
+{# equipment/templates/equipment/equipment_detail.html #}
+{% extends "base.html" %}
+{% block title %}{{ equipment.name }}{% endblock %}
+{% block extra_head %}
+{% if equipment.has_location %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% endif %}
+{% endblock %}
+{% block content %}
+
+  <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+    <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">{{ equipment.name }}</h1>
+    <div class="flex gap-2.5">
+      <a href="{% url 'equipment_edit' equipment.pk %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-amber hover:opacity-90 transition-colors">Edit</a>
+      <a href="{% url 'equipment_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Kembali</a>
+    </div>
+  </div>
+
+  <div class="relative bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5 overflow-hidden">
+    <div class="absolute left-0 top-0 bottom-0 w-1 bg-brand"></div>
+    <div class="flex flex-col sm:flex-row gap-5">
+      {% if equipment.photo %}
+        <button type="button" onclick="openPhotoLightbox()" class="w-full sm:w-40 h-40 flex-shrink-0 rounded-[10px] border border-line overflow-hidden relative group cursor-zoom-in p-0">
+          <img src="{{ equipment.photo.url }}" alt="{{ equipment.name }}" class="w-full h-full object-cover">
+          <span class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+            <span class="opacity-0 group-hover:opacity-100 transition-opacity text-white text-[11px] font-semibold bg-black/50 px-2.5 py-1 rounded-full">🔍 Perbesar</span>
+          </span>
+        </button>
+      {% else %}
+        <div class="w-full sm:w-40 h-40 rounded-[10px] border-[1.5px] border-dashed border-line flex items-center justify-center text-muted text-[12px] flex-shrink-0">
+          Tidak ada foto
+        </div>
+      {% endif %}
+      <div class="flex-1">
+        <h2 class="font-display text-[16px] font-semibold mb-4">📦 Informasi Barang</h2>
+        <div class="grid grid-cols-2 sm:grid-cols-2 gap-y-4 gap-x-6">
+          <div><span class="field-label">Nomor Seri</span><span class="field-value">{{ equipment.serial_number|default:"—" }}</span></div>
+          <div><span class="field-label">Nama Barang</span><span class="field-value">{{ equipment.name }}</span></div>
+          <div><span class="field-label">Status</span><span class="badge badge-{{ equipment.status_color }}">{{ equipment.get_status_display }}</span></div>
+          <div><span class="field-label">Merk</span><span class="field-value">{{ equipment.brand }}</span></div>
+          <div><span class="field-label">Tipe</span><span class="field-value">{{ equipment.model_type|default:"—" }}</span></div>
+          <div><span class="field-label">Tahun Perolehan</span><span class="field-value">{{ equipment.acquisition_year }}</span></div>
+          <div><span class="field-label">Lokasi</span><span class="field-value">{{ equipment.location_name|default:"—" }}</span></div>
+        </div>
+      </div>
+    </div>
+    {% if equipment.notes %}
+      <div class="mt-4 pt-4 border-t border-line">
+        <span class="field-label">Keterangan</span>
+        <p class="text-[13.5px] mt-1">{{ equipment.notes }}</p>
+      </div>
+    {% endif %}
+  </div>
+
+  {% if equipment.has_location %}
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
+    <h2 class="font-display text-[16px] font-semibold mb-3">📍 Titik Lokasi</h2>
+    <div id="detailMap" class="w-full h-56 rounded-[10px] border border-line"></div>
+  </div>
+  {% endif %}
+
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5 flex flex-wrap items-center gap-6">
+    <div>
+      <span class="field-label mb-2 block">QR Code Barang</span>
+      <img src="{% url 'equipment_qrcode' equipment.pk %}?size=6"
+           alt="QR {{ equipment.name }}"
+           class="w-32 h-32 border border-line rounded-[10px] p-2 bg-white">
+    </div>
+    <div class="flex-1 min-w-[220px]">
+      <p class="text-[13.5px] text-muted mb-3">
+        Scan QR ini untuk langsung membuka halaman detail barang ini (lengkap dengan riwayat maintenance-nya).
+        Cetak dan tempel pada barang fisik.
+      </p>
+      <a href="{% url 'equipment_qrcode_print' equipment.pk %}" target="_blank"
+         class="inline-block px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-ink hover:bg-brand-dark transition-colors">
+        🖨️ Cetak Label QR
+      </a>
+    </div>
+  </div>
+
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="font-display text-[16px] font-semibold">🗓️ Jadwal &amp; Riwayat Maintenance</h2>
+      {% if equipment.status == "under_repair" or equipment.status == "scheduled" %}
+      <span class="px-3.5 py-2 rounded-[10px] text-[12.5px] font-semibold text-muted bg-bg cursor-not-allowed" title="Barang sedang {{ equipment.get_status_display }}, tidak bisa ditambahkan jadwal baru">+ Tambah</span>
+      {% else %}
+      <a href="{% url 'schedule_add' %}?equipment={{ equipment.pk }}" class="px-3.5 py-2 rounded-[10px] text-[12.5px] font-semibold text-white bg-ink hover:bg-brand-dark transition-colors">+ Tambah</a>
+      {% endif %}
+    </div>
+    {% if schedule_list %}
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[720px] border-collapse text-[13.5px]">
+          <thead>
+            <tr>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold pb-2">Tanggal Jadwal</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold pb-2">Jenis</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold pb-2">Teknisi</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold pb-2">Hasil</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold pb-2">Biaya</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold pb-2">Aksi</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-line">
+            {% for s in schedule_list %}
+            <tr>
+              <td class="py-2.5 font-mono">{{ s.scheduled_date|date:"d-m-Y" }}</td>
+              <td class="py-2.5">{{ s.get_maintenance_type_display }}</td>
+              <td class="py-2.5">{{ s.log.technician|default:"—" }}</td>
+              <td class="py-2.5">
+                {% if s.log %}
+                  <span class="badge badge-{{ s.log.result_color }}">{{ s.log.get_result_display }}</span>
+                {% else %}
+                  <span class="badge badge-muted">—</span>
+                {% endif %}
+              </td>
+              <td class="py-2.5 font-mono">{% if s.log %}Rp{{ s.log.cost|floatformat:0 }}{% else %}—{% endif %}</td>
+              <td class="py-2.5">
+                <div class="flex gap-2 flex-wrap">
+                  {% if s.is_editable %}
+                  <a href="{% url 'schedule_edit' s.pk %}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-amber hover:opacity-90">Edit Jadwal</a>
+                  {% endif %}
+                  {% if s.log %}
+                  {% if s.is_editable %}
+                  <a href="{% url 'log_edit' s.log.pk %}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-brand hover:opacity-90">Edit Riwayat</a>
+                  {% endif %}
+                  {% endif %}
+                  <a href="{% url 'schedule_delete' s.pk %}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-red hover:opacity-90">Hapus</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <a href="{% url 'schedule_list' %}?q={{ equipment.name|urlencode }}" class="inline-block mt-3 text-[12.5px] font-semibold text-brand hover:underline">Lihat semua jadwal &amp; riwayat barang ini →</a>
+    {% else %}
+      <p class="text-[13.5px] text-muted">Belum ada jadwal maupun riwayat maintenance.</p>
+    {% endif %}
+  </div>
+
+  {% if equipment.photo %}
+  <div id="photoLightbox" onclick="closePhotoLightbox()"
+       class="hidden fixed inset-0 bg-black/80 z-[9999] items-center justify-center p-4 cursor-zoom-out">
+    <button type="button" onclick="closePhotoLightbox()"
+      class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xl transition-colors">
+      ✕
+    </button>
+    <img src="{{ equipment.photo.url }}" alt="{{ equipment.name }}"
+         onclick="event.stopPropagation()"
+         class="max-w-full max-h-full object-contain rounded-[10px] cursor-default">
+  </div>
+  {% endif %}
+
+  {% if equipment.has_location %}
+  <script>
+    const detailMap = L.map('detailMap', { zoomControl: true, dragging: true, scrollWheelZoom: false })
+      .setView([{{ equipment.latitude }}, {{ equipment.longitude }}], 17);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(detailMap);
+    L.marker([{{ equipment.latitude }}, {{ equipment.longitude }}]).addTo(detailMap);
+  </script>
+  {% endif %}
+
+  {% if equipment.photo %}
+  <script>
+    function openPhotoLightbox(){
+      const lightbox = document.getElementById('photoLightbox');
+      lightbox.classList.remove('hidden');
+      lightbox.classList.add('flex');
+      document.body.style.overflow = 'hidden';
+    }
+    function closePhotoLightbox(){
+      const lightbox = document.getElementById('photoLightbox');
+      lightbox.classList.add('hidden');
+      lightbox.classList.remove('flex');
+      document.body.style.overflow = '';
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closePhotoLightbox();
+    });
+  </script>
+  {% endif %}
+
+{% endblock %}

@@ -1,0 +1,153 @@
+{# equipment/templates/equipment/equipment_form.html #}
+{% extends "base.html" %}
+{% block title %}{% if mode == "edit" %}Edit Barang{% else %}Tambah Barang{% endif %}{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+{% endblock %}
+{% block content %}
+
+  <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+    <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">
+      {% if mode == "edit" %}Edit Barang{% else %}Tambah Barang{% endif %}
+    </h1>
+    <a href="{% url 'equipment_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Kembali</a>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="bg-white border border-line rounded-xl2 p-5 sm:p-6 max-w-[720px]">
+    {% csrf_token %}
+
+    <div class="mb-5">
+      <label class="field-label">Foto Barang</label>
+      {% if mode == "edit" and equipment.photo %}
+        <img src="{{ equipment.photo.url }}" alt="{{ equipment.name }}" class="w-32 h-32 object-cover rounded-[10px] border border-line mb-2">
+      {% endif %}
+      {{ form.photo }}
+      {% if form.photo.errors %}<p class="text-[12px] text-red mt-1">{{ form.photo.errors|join:", " }}</p>{% endif %}
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {% for field in form %}
+        {% if field.name != "photo" and field.name != "latitude" and field.name != "longitude" and field.name != "notes" %}
+        <div>
+          <label class="field-label">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<p class="text-[12px] text-red mt-1">{{ field.errors|join:", " }}</p>{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <div class="mt-5">
+      <label class="field-label">Titik Lokasi di Peta (opsional — cari alamat atau klik peta buat nandain)</label>
+      <div class="flex gap-2 mb-2">
+        <input type="text" id="locationSearchInput" placeholder="Ketik alamat, cth. Jl Basuki Rahmat, Palembang..."
+          class="field-input" style="flex: 1;">
+        <button type="button" id="locationSearchBtn" onclick="searchLocation()"
+          class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors whitespace-nowrap">
+          🔍 Cari
+        </button>
+      </div>
+      <p id="locationSearchStatus" class="text-[12px] text-muted mb-2" style="display: none;"></p>
+      <div id="locationMap" class="w-full h-64 rounded-[10px] border border-line"></div>
+      {{ form.latitude }}
+      {{ form.longitude }}
+      <p id="mapCoordsLabel" class="text-[12px] text-muted mt-1.5">
+        {% if equipment.has_location %}
+          Koordinat tersimpan: {{ equipment.latitude }}, {{ equipment.longitude }}
+        {% else %}
+          Belum ada titik lokasi tersimpan.
+        {% endif %}
+      </p>
+    </div>
+
+    <div class="mt-5">
+      <label class="field-label">{{ form.notes.label }}</label>
+      {{ form.notes }}
+      {% if form.notes.errors %}<p class="text-[12px] text-red mt-1">{{ form.notes.errors|join:", " }}</p>{% endif %}
+    </div>
+
+    <div class="flex gap-2.5 mt-6">
+      <button type="submit" class="px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Simpan</button>
+      <a href="{% url 'equipment_list' %}" class="px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Batal</a>
+    </div>
+  </form>
+
+  <script>
+    const initialLat = {{ equipment.latitude|default:"null" }};
+    const initialLng = {{ equipment.longitude|default:"null" }};
+    const startLat = initialLat !== null ? initialLat : -2.9909;
+    const startLng = initialLng !== null ? initialLng : 104.7566;
+
+    const map = L.map('locationMap').setView([startLat, startLng], initialLat !== null ? 17 : 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    let marker = null;
+    if (initialLat !== null && initialLng !== null) {
+      marker = L.marker([initialLat, initialLng]).addTo(map);
+    }
+
+    function setLocation(lat, lng) {
+      document.getElementById('id_latitude').value = lat.toFixed(6);
+      document.getElementById('id_longitude').value = lng.toFixed(6);
+      document.getElementById('mapCoordsLabel').textContent = 'Koordinat dipilih: ' + lat.toFixed(6) + ', ' + lng.toFixed(6);
+      if (marker) {
+        marker.setLatLng([lat, lng]);
+      } else {
+        marker = L.marker([lat, lng]).addTo(map);
+      }
+    }
+
+    map.on('click', function(e) {
+      setLocation(e.latlng.lat, e.latlng.lng);
+    });
+    map.on('click', function(e) {
+      setLocation(e.latlng.lat, e.latlng.lng);
+    });
+
+    // ==== Pencarian alamat (Nominatim / OpenStreetMap) ====
+    async function searchLocation() {
+      const query = document.getElementById('locationSearchInput').value.trim();
+      const statusEl = document.getElementById('locationSearchStatus');
+      const searchBtn = document.getElementById('locationSearchBtn');
+
+      if (!query) return;
+
+      searchBtn.disabled = true;
+      statusEl.style.display = 'block';
+      statusEl.textContent = 'Mencari...';
+
+      try {
+        const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=5&q=' + encodeURIComponent(query);
+        const response = await fetch(url, { headers: { 'Accept-Language': 'id' } });
+        const results = await response.json();
+
+        if (results.length === 0) {
+          statusEl.textContent = 'Lokasi tidak ditemukan — coba kata kunci lain, atau klik langsung di peta.';
+        } else {
+          const first = results[0];
+          const lat = parseFloat(first.lat);
+          const lng = parseFloat(first.lon);
+          map.setView([lat, lng], 17);
+          setLocation(lat, lng);
+          statusEl.textContent = '📍 ' + first.display_name;
+        }
+      } catch (err) {
+        statusEl.textContent = 'Gagal mencari lokasi. Coba lagi, atau klik langsung di peta.';
+      } finally {
+        searchBtn.disabled = false;
+      }
+    }
+
+    document.getElementById('locationSearchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchLocation();
+      }
+    });
+  </script>
+
+{% endblock %}

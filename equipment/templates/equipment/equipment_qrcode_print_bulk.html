@@ -1,0 +1,198 @@
+{# equipment/templates/equipment/equipment_qrcode_print_bulk.html #}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Cetak Label QR</title>
+<style>
+  body{
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+    background: #F1F4F8;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+
+  /* ===== Panel pengaturan (nggak ikut kecetak) ===== */
+  .settings-panel{
+    background: #fff;
+    border: 1px solid #DCE3EA;
+    border-radius: 10px;
+    padding: 16px;
+    max-width: 480px;
+    margin: 0 auto 20px;
+  }
+  .settings-panel h2{
+    font-size: 13px; font-weight: 700; color: #14213D; margin: 0 0 10px;
+  }
+  .settings-row{ display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .settings-row > div{ flex: 1; min-width: 90px; }
+  .settings-row label{
+    display: block; font-size: 10.5px; color: #5E6B7C; margin-bottom: 3px;
+  }
+  .settings-row input[type="number"]{
+    width: 100%; padding: 6px 8px; border: 1px solid #DCE3EA; border-radius: 6px;
+    font-size: 12.5px; box-sizing: border-box;
+  }
+  .preset-row{ display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+  .preset-btn{
+    padding: 5px 10px; border: 1px solid #DCE3EA; border-radius: 999px;
+    background: #F1F4F8; font-size: 11px; cursor: pointer; color: #14213D;
+  }
+  .preset-btn:hover{ border-color: #2A5C8A; color: #2A5C8A; }
+  .print-btn{
+    width: 100%; padding: 10px; border-radius: 10px; font-weight: 600;
+    background: #2A5C8A; color: #fff; border: none; cursor: pointer; font-size: 13.5px;
+  }
+
+  /* ===== Lembar label (ikut kecetak) ===== */
+  .sheet{
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 2), 1fr);
+    gap: 4mm;
+    padding: 8mm;
+    background: #fff;
+    max-width: 210mm;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+  .label{
+    display: flex; flex-direction: row; align-items: center; gap: 2mm;
+    border: 1px solid #DCE3EA; border-radius: 6px;
+    padding: 2mm; box-sizing: border-box;
+    width: var(--label-w, auto);
+    height: var(--label-h, auto);
+  }
+  .label img{
+    width: var(--qr-size, 20mm); height: var(--qr-size, 20mm); flex-shrink: 0;
+  }
+  .label .text-block{ text-align: left; overflow: hidden; flex: 1; min-width: 0; }
+  .label .name{
+    font-size: 9px; font-weight: 700; line-height: 1.2; color: #14213D;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .label .brand{
+    font-size: 7.5px; color: #5E6B7C; margin-top: 0.5mm;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .label .serial{
+    font-size: 7.5px; color: #14213D; margin-top: 0.5mm;
+    font-family: 'Courier New', monospace;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  @media print{
+    html, body{ margin: 0 !important; padding: 0 !important; background: #fff; }
+    .no-print{ display: none !important; }
+    .sheet{ padding: 0; max-width: none; }
+    .label{ page-break-inside: avoid; break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="settings-panel no-print" id="settingsPanel">
+    <h2>Pengaturan Label ({{ equipment_list|length }} barang)</h2>
+    <div class="settings-row">
+      <div>
+        <label>Jumlah Kolom</label>
+        <input type="number" id="inputCols" min="1" max="8" value="2">
+      </div>
+      <div>
+        <label>Lebar Label (mm)</label>
+        <input type="number" id="inputWidth" min="10" max="200" value="60">
+      </div>
+      <div>
+        <label>Tinggi Label (mm)</label>
+        <input type="number" id="inputHeight" min="10" max="200" value="25">
+      </div>
+      <div>
+        <label>Ukuran QR (mm)</label>
+        <input type="number" id="inputQr" min="8" max="150" value="20">
+      </div>
+    </div>
+    <div class="preset-row">
+      <button type="button" class="preset-btn" onclick="applyPreset(2,60,25,20)">2 kolom · 60×25</button>
+      <button type="button" class="preset-btn" onclick="applyPreset(3,50,25,18)">3 kolom · 50×25</button>
+      <button type="button" class="preset-btn" onclick="applyPreset(4,40,20,14)">4 kolom · 40×20</button>
+      <button type="button" class="preset-btn" onclick="applyPreset(4,45,45,30)">4 kolom · kotak 45×45</button>
+    </div>
+    <button type="button" class="print-btn" onclick="window.print()">🖨️ Cetak Semua Label</button>
+  </div>
+
+  <div class="sheet" id="sheetBox">
+    {% for item in equipment_list %}
+    <div class="label">
+      <img src="{% url 'equipment_qrcode' item.pk %}?size=6" alt="QR {{ item.name }}">
+      <div class="text-block">
+        <div class="name">{{ item.name }}</div>
+        <div class="brand">{{ item.brand }}{% if item.model_type %} · {{ item.model_type }}{% endif %}</div>
+        {% if item.serial_number %}<div class="serial">SN: {{ item.serial_number }}</div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <script>
+    const SIZE_KEY = 'equipmentLabelSize';       // dipakai bareng sama halaman cetak satuan
+    const COLS_KEY = 'equipmentBulkColumns';
+
+    const inputCols = document.getElementById('inputCols');
+    const inputWidth = document.getElementById('inputWidth');
+    const inputHeight = document.getElementById('inputHeight');
+    const inputQr = document.getElementById('inputQr');
+    const sheetBox = document.getElementById('sheetBox');
+
+    function applyValues(cols, w, h, qr) {
+      sheetBox.style.setProperty('--cols', cols);
+      sheetBox.style.setProperty('--label-w', w + 'mm');
+      sheetBox.style.setProperty('--label-h', h + 'mm');
+      sheetBox.style.setProperty('--qr-size', qr + 'mm');
+    }
+
+    function saveValues(cols, w, h, qr) {
+      localStorage.setItem(COLS_KEY, cols);
+      localStorage.setItem(SIZE_KEY, JSON.stringify({ w, h, qr }));
+    }
+
+    function applyPreset(cols, w, h, qr) {
+      inputCols.value = cols;
+      inputWidth.value = w;
+      inputHeight.value = h;
+      inputQr.value = qr;
+      applyValues(cols, w, h, qr);
+      saveValues(cols, w, h, qr);
+    }
+
+    function onInputChange() {
+      const cols = parseInt(inputCols.value) || 2;
+      const w = parseFloat(inputWidth.value) || 60;
+      const h = parseFloat(inputHeight.value) || 25;
+      const qr = parseFloat(inputQr.value) || 20;
+      applyValues(cols, w, h, qr);
+      saveValues(cols, w, h, qr);
+    }
+
+    [inputCols, inputWidth, inputHeight, inputQr].forEach(el => el.addEventListener('input', onInputChange));
+
+    // Muat pengaturan terakhir (kalau ada) — termasuk ukuran yang mungkin
+    // udah di-set dari halaman cetak satuan.
+    const savedCols = localStorage.getItem(COLS_KEY);
+    const savedSize = localStorage.getItem(SIZE_KEY);
+    let cols = savedCols ? parseInt(savedCols) : 2;
+    let w = 60, h = 25, qr = 20;
+    if (savedSize) {
+      try {
+        const parsed = JSON.parse(savedSize);
+        w = parsed.w; h = parsed.h; qr = parsed.qr;
+      } catch (e) {}
+    }
+    inputCols.value = cols;
+    inputWidth.value = w;
+    inputHeight.value = h;
+    inputQr.value = qr;
+    applyValues(cols, w, h, qr);
+  </script>
+
+</body>
+</html>

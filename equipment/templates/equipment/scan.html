@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Scan{% endblock %}
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+{% endblock %}
+{% block content %}
+
+  <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+    <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">Scan QR Code</h1>
+    <a href="{% url 'dashboard' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Kembali</a>
+  </div>
+
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
+    <h2 class="font-display text-[16px] font-semibold mb-4 flex items-center gap-2">📷 Scan dengan Kamera</h2>
+    <p class="text-[13.5px] text-muted mb-4">
+      Arahkan kamera ke QR code pada barang. Setiap QR berisi tautan langsung ke halaman detail barang
+      (lengkap dengan riwayat maintenance) — begitu ter-scan, otomatis terbuka.
+    </p>
+
+    <div id="cameraIdle" class="flex flex-col items-center justify-center py-8 px-4 border-[1.5px] border-dashed border-line rounded-xl2">
+      <button id="startScanBtn" onclick="startScan()"
+        class="px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">
+        Mulai Scan
+      </button>
+    </div>
+
+    <div id="cameraActive" class="hidden">
+      <div id="qrReader" class="rounded-xl2 overflow-hidden border border-line"></div>
+      <div class="flex items-center justify-between mt-3 gap-3">
+        <p id="scanStatus" class="text-[12.5px] text-muted">Mengarahkan kamera...</p>
+        <div class="flex items-center gap-2">
+          <button onclick="switchCamera()"
+            class="px-4 py-2 rounded-[10px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors whitespace-nowrap">
+            🔄 Ganti Kamera
+          </button>
+          <button onclick="stopScan()"
+            class="px-4 py-2 rounded-[10px] text-[12.5px] font-semibold border border-line bg-white hover:border-red hover:text-red transition-colors whitespace-nowrap">
+            Berhenti
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <p id="cameraError" class="hidden text-[13px] text-red mt-3"></p>
+  </div>
+
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+    <h2 class="font-display text-[16px] font-semibold mb-4 flex items-center gap-2">🔍 Cari Manual</h2>
+    <p class="text-[13.5px] text-muted mb-4">Tidak ada QR di tangan, atau kamera tidak tersedia? Cari barangnya langsung dari daftar.</p>
+    <form method="get" action="{% url 'equipment_list' %}" class="flex flex-wrap gap-2.5">
+      <input type="text" name="q" placeholder="Nama / Merk / Tipe barang..."
+        class="flex-1 min-w-[200px] px-3.5 py-2.5 rounded-[10px] border border-line text-sm focus:outline-none focus:border-brand">
+      <button type="submit" class="px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Cari</button>
+    </form>
+  </div>
+
+  <script>
+    let html5QrCode = null;
+    let scanHandled = false;
+    let currentFacingMode = "environment";
+
+    // Only follow a scanned QR if it's actually one of our own equipment-detail
+    // links — protects against a malicious/foreign QR redirecting the user
+    // somewhere else.
+    function isValidEquipmentUrl(text) {
+      try {
+        const url = new URL(text, window.location.origin);
+        if (url.origin !== window.location.origin) return false;
+        return /\/equipment\/\d+\/$/.test(url.pathname);
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function onScanSuccess(decodedText) {
+      if (scanHandled) return;
+
+      if (!isValidEquipmentUrl(decodedText)) {
+        document.getElementById('scanStatus').textContent =
+          'QR terbaca tapi bukan QR barang dari sistem ini — coba lagi.';
+        return;
+      }
+
+      scanHandled = true;
+      document.getElementById('scanStatus').textContent = 'Barang ditemukan, membuka halaman detail...';
+      stopScan().then(() => {
+        window.location.href = decodedText;
+      });
+    }
+
+    function onScanFailure() {
+      // Fires continuously while no QR is in frame — intentionally ignored.
+    }
+
+    function startScan() {
+      document.getElementById('cameraIdle').classList.add('hidden');
+      document.getElementById('cameraActive').classList.remove('hidden');
+      document.getElementById('cameraError').classList.add('hidden');
+      scanHandled = false;
+
+      // Kasih jeda sedikit supaya browser sempat me-layout ulang #qrReader
+      // (yang baru saja di-unhide) sebelum library ngukur dimensinya —
+      // kalau langsung dipanggil, dimensinya sering kebaca 0x0 dan kamera
+      // jadi nyala tapi tidak pernah mendeteksi apa pun.
+      setTimeout(() => {
+        html5QrCode = new Html5Qrcode("qrReader");
+        html5QrCode
+          .start(
+            { facingMode: currentFacingMode },
+            { fps: 10, qrbox: { width: 240, height: 240 } },
+            onScanSuccess,
+            onScanFailure
+          )
+          .catch((err) => {
+            document.getElementById('cameraActive').classList.add('hidden');
+            document.getElementById('cameraIdle').classList.remove('hidden');
+            const errorEl = document.getElementById('cameraError');
+            errorEl.textContent =
+              'Tidak bisa mengakses kamera: ' + err + '. Pastikan izin kamera diberikan, ' +
+              'situs diakses lewat HTTPS, atau gunakan pencarian manual di bawah.';
+            errorEl.classList.remove('hidden');
+          });
+      }, 100);
+    }
+
+    function switchCamera() {
+      currentFacingMode = currentFacingMode === "environment" ? "user" : "environment";
+      document.getElementById('scanStatus').textContent = 'Mengganti kamera...';
+
+      if (html5QrCode) {
+        html5QrCode
+          .stop()
+          .then(() => {
+            html5QrCode.clear();
+            html5QrCode = new Html5Qrcode("qrReader");
+            return html5QrCode.start(
+              { facingMode: currentFacingMode },
+              { fps: 10, qrbox: { width: 240, height: 240 } },
+              onScanSuccess,
+              onScanFailure
+            );
+          })
+          .then(() => {
+            document.getElementById('scanStatus').textContent = 'Mengarahkan kamera...';
+          })
+          .catch((err) => {
+            document.getElementById('cameraError').textContent = 'Gagal ganti kamera: ' + err;
+            document.getElementById('cameraError').classList.remove('hidden');
+          });
+      }
+    }
+
+    function stopScan() {
+      if (html5QrCode) {
+        return html5QrCode
+          .stop()
+          .then(() => {
+            html5QrCode.clear();
+            html5QrCode = null;
+            document.getElementById('cameraActive').classList.add('hidden');
+            document.getElementById('cameraIdle').classList.remove('hidden');
+          })
+          .catch(() => {
+            html5QrCode = null;
+          });
+      }
+      return Promise.resolve();
+    }
+  </script>
+
+{% endblock %}

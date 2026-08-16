@@ -1,0 +1,68 @@
+{# equipment/templates/equipment/equipment_map.html #}
+{% extends "base.html" %}
+{% block title %}Peta Barang{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+{% endblock %}
+{% block content %}
+
+  <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+    <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">Peta Sebaran Barang</h1>
+    <a href="{% url 'equipment_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Kembali</a>
+  </div>
+
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+    <div id="fullMap" class="w-full h-[520px] rounded-[10px] border border-line"></div>
+    <p class="text-[12.5px] text-muted mt-3">
+      Hanya barang dengan titik lokasi tersimpan yang tampil di peta ini. Barang yang lokasinya berdekatan
+      otomatis dikelompokkan — klik bubble angka buat lihat isinya.
+    </p>
+  </div>
+
+  <script>
+    const markers = {{ markers_json|safe }};
+    const map = L.map('fullMap').setView([-2.9909, 104.7566], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(map);
+
+    const colorHex = { green: '#328A63', amber: '#C97A2E', red: '#C0483F', muted: '#5E6B7C', brand: '#2A5C8A' };
+
+    // Grup cluster — spiderfyOnMaxZoom: kalau ada marker yang koordinatnya
+    // persis sama dan sudah di zoom maksimal, otomatis "dibuka" kayak jari
+    // kipas biar tetap bisa diklik satu-satu.
+    const clusterGroup = L.markerClusterGroup({
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      maxClusterRadius: 50,
+    });
+
+    const bounds = [];
+
+    markers.forEach(m => {
+      const color = colorHex[m.status_color] || '#2A5C8A';
+      const icon = L.divIcon({
+        className: '',
+        html: `<div style="width:20px;height:20px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);"></div>`,
+        iconSize: [20, 20],
+        iconAnchor: [10, 10],
+      });
+      const marker = L.marker([m.lat, m.lng], { icon: icon });
+      marker.bindPopup(`<strong>${m.name}</strong><br>${m.status}<br><a href="${m.url}">Lihat detail →</a>`);
+      clusterGroup.addLayer(marker);
+      bounds.push([m.lat, m.lng]);
+    });
+
+    map.addLayer(clusterGroup);
+
+    if (bounds.length > 0) {
+      map.fitBounds(bounds, { padding: [30, 30] });
+    }
+  </script>
+
+{% endblock %}

@@ -1,0 +1,207 @@
+{# equipment/templates/equipment/equipment_qrcode_print.html #}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Label QR — {{ equipment.name }}</title>
+<style>
+  body{
+    font-family: Arial, Helvetica, sans-serif;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #F1F4F8;
+    padding: 16px;
+    box-sizing: border-box;
+  }
+
+  /* ===== Panel pengaturan (nggak ikut kecetak) ===== */
+  .settings-panel{
+    background: #fff;
+    border: 1px solid #DCE3EA;
+    border-radius: 10px;
+    padding: 16px;
+    width: 100%;
+    max-width: 360px;
+    margin-bottom: 20px;
+  }
+  .settings-panel h2{
+    font-size: 13px; font-weight: 700; color: #14213D; margin: 0 0 10px;
+  }
+  .settings-row{ display: flex; gap: 8px; margin-bottom: 8px; }
+  .settings-row label{
+    display: block; font-size: 10.5px; color: #5E6B7C; margin-bottom: 3px;
+  }
+  .settings-row input[type="number"]{
+    width: 100%; padding: 6px 8px; border: 1px solid #DCE3EA; border-radius: 6px;
+    font-size: 12.5px; box-sizing: border-box;
+  }
+  .preset-row{ display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+  .preset-btn{
+    padding: 5px 10px; border: 1px solid #DCE3EA; border-radius: 999px;
+    background: #F1F4F8; font-size: 11px; cursor: pointer; color: #14213D;
+  }
+  .preset-btn:hover{ border-color: #2A5C8A; color: #2A5C8A; }
+  .print-btn{
+    width: 100%; padding: 10px; border-radius: 10px; font-weight: 600;
+    background: #2A5C8A; color: #fff; border: none; cursor: pointer; font-size: 13.5px;
+  }
+
+  /* ===== Label (ikut kecetak) — layout horizontal: QR kiri, teks kanan ===== */
+  .label{
+    background: #fff;
+    border: 1px solid #DCE3EA;
+    border-radius: 6px;
+    padding: 1.5mm;
+    box-sizing: border-box;
+    width: var(--label-w, 60mm);
+    height: var(--label-h, 25mm);
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1.5mm;
+  }
+  .label img{
+    width: var(--qr-size, 20mm);
+    height: var(--qr-size, 20mm);
+    flex-shrink: 0;
+  }
+  .label .text-block{
+    text-align: left;
+    overflow: hidden;
+    flex: 1;
+    min-width: 0;
+  }
+  .label .name{
+    font-size: 9px; font-weight: 700;
+    line-height: 1.2; color: #14213D;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .label .brand{
+    font-size: 7.5px; color: #5E6B7C; margin-top: 0.5mm;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .label .serial{
+    font-size: 7.5px; color: #14213D; margin-top: 0.5mm;
+    font-family: 'Courier New', monospace;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  @media print{
+    html, body{
+      margin: 0 !important;
+      padding: 0 !important;
+      min-height: 0 !important;
+      height: auto !important;
+      display: block !important;
+      background: #fff;
+    }
+    .no-print{ display: none !important; }
+    .label{
+      border: none;
+      margin: 0;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+  }
+</style>
+</head>
+<body>
+
+  <div class="settings-panel no-print" id="settingsPanel">
+    <h2>Pengaturan Ukuran Label (mm)</h2>
+    <div class="settings-row">
+      <div>
+        <label>Lebar</label>
+        <input type="number" id="inputWidth" min="10" max="200" value="60">
+      </div>
+      <div>
+        <label>Tinggi</label>
+        <input type="number" id="inputHeight" min="10" max="200" value="25">
+      </div>
+      <div>
+        <label>Ukuran QR</label>
+        <input type="number" id="inputQr" min="8" max="150" value="20">
+      </div>
+    </div>
+    <div class="preset-row">
+      <button type="button" class="preset-btn" onclick="applyPreset(60,25,20)">60×25</button>
+      <button type="button" class="preset-btn" onclick="applyPreset(50,25,18)">50×25</button>
+      <button type="button" class="preset-btn" onclick="applyPreset(70,30,24)">70×30</button>
+      <button type="button" class="preset-btn" onclick="applyPreset(40,20,14)">40×20</button>
+      <button type="button" class="preset-btn" onclick="applyPreset(50,50,32)">50×50 (kotak)</button>
+    </div>
+    <button type="button" class="print-btn" onclick="window.print()">🖨️ Cetak Label</button>
+  </div>
+
+  <div class="label" id="labelBox">
+    <img src="{% url 'equipment_qrcode' equipment.pk %}?size=6" alt="QR {{ equipment.name }}">
+    <div class="text-block">
+      <div class="name">{{ equipment.name }}</div>
+      <div class="brand">{{ equipment.brand }}{% if equipment.model_type %} · {{ equipment.model_type }}{% endif %}</div>
+      {% if equipment.serial_number %}<div class="serial">SN: {{ equipment.serial_number }}</div>{% endif %}
+    </div>
+  </div>
+
+  <style id="pageSizeStyle">
+    @page { size: 60mm 25mm; margin: 2mm; }
+  </style>
+
+  <script>
+    const STORAGE_KEY = 'equipmentLabelSize';
+    const inputWidth = document.getElementById('inputWidth');
+    const inputHeight = document.getElementById('inputHeight');
+    const inputQr = document.getElementById('inputQr');
+    const labelBox = document.getElementById('labelBox');
+    const pageSizeStyle = document.getElementById('pageSizeStyle');
+
+    function applySize(w, h, qr) {
+      labelBox.style.setProperty('--label-w', w + 'mm');
+      labelBox.style.setProperty('--label-h', h + 'mm');
+      labelBox.style.setProperty('--qr-size', qr + 'mm');
+      pageSizeStyle.textContent = `@page { size: ${w}mm ${h}mm; margin: 2mm; }`;
+    }
+
+    function saveSize(w, h, qr) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ w, h, qr }));
+    }
+
+    function applyPreset(w, h, qr) {
+      inputWidth.value = w;
+      inputHeight.value = h;
+      inputQr.value = qr;
+      applySize(w, h, qr);
+      saveSize(w, h, qr);
+    }
+
+    function onInputChange() {
+      const w = parseFloat(inputWidth.value) || 60;
+      const h = parseFloat(inputHeight.value) || 25;
+      const qr = parseFloat(inputQr.value) || 20;
+      applySize(w, h, qr);
+      saveSize(w, h, qr);
+    }
+
+    [inputWidth, inputHeight, inputQr].forEach(el => el.addEventListener('input', onInputChange));
+
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const { w, h, qr } = JSON.parse(saved);
+        inputWidth.value = w;
+        inputHeight.value = h;
+        inputQr.value = qr;
+        applySize(w, h, qr);
+      } catch (e) {
+        applySize(60, 25, 20);
+      }
+    } else {
+      applySize(60, 25, 20);
+    }
+  </script>
+
+</body>
+</html>

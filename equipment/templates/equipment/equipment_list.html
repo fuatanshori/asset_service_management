@@ -1,0 +1,165 @@
+{# equipment/templates/equipment/equipment_list.html #}
+{% extends "base.html" %}
+{% block title %}Data Barang{% endblock %}
+{% block content %}
+
+  <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+    <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">Data Barang</h1>
+    <div class="flex flex-wrap gap-2.5">
+      <a href="{% url 'equipment_map' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">🗺️ Peta Barang</a>
+      <a href="{% url 'equipment_export' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬇️ Export Excel</a>
+      <a href="{% url 'equipment_add' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">+ Tambah Barang</a>
+    </div>
+  </div>
+
+  <form method="get" class="bg-white border border-line rounded-xl2 p-5 mb-5">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+      <div>
+        <label class="field-label">Cari</label>
+        <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Nama / Merk / Tipe" class="field-input">
+      </div>
+      <div>
+        <label class="field-label">Merk</label>
+        <select name="brand" class="field-input">
+          <option value="">Semua</option>
+          {% for b in brand_choices %}<option value="{{ b }}" {% if request.GET.brand == b %}selected{% endif %}>{{ b }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Tipe</label>
+        <select name="model_type" class="field-input">
+          <option value="">Semua</option>
+          {% for t in model_type_choices %}<option value="{{ t }}" {% if request.GET.model_type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+      <div>
+        <label class="field-label">Tahun</label>
+        <select name="acquisition_year" class="field-input">
+          <option value="">Semua</option>
+          {% for y in year_choices %}<option value="{{ y }}" {% if request.GET.acquisition_year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Status</label>
+        <select name="status" class="field-input">
+          <option value="">Semua</option>
+          {% for value, label in form.fields.status.choices %}
+            {% if value %}<option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>{% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <div class="flex gap-2.5">
+        <button type="submit" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
+        <a href="{% url 'equipment_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Reset</a>
+      </div>
+    </div>
+  </form>
+
+  <form id="bulkPrintForm" method="get" action="{% url 'equipment_qrcode_print_bulk' %}" target="_blank">
+    <div class="bg-white border border-line rounded-xl2 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[820px] border-collapse">
+          <thead>
+            <tr class="bg-bg/60">
+              <th class="px-4 py-3"><input type="checkbox" id="selectAll"></th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">QR Code</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Foto</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Nama Barang</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Merk</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tipe</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">No. Seri</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tahun</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Status</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in equipment_list %}
+            <tr class="border-t border-line">
+              <td class="px-4 py-3"><input type="checkbox" name="ids" value="{{ item.pk }}" class="rowCheckbox"></td>
+              <td class="px-4 py-3">
+                <a href="{% url 'equipment_detail' item.pk %}">
+                  <img src="{% url 'equipment_qrcode' item.pk %}?size=3"
+                       alt="QR {{ item.name }}" class="w-9 h-9 border border-line rounded-[6px]">
+                </a>
+              </td>
+              <td class="px-4 py-3">
+                {% if item.photo %}
+                  <img src="{{ item.photo.url }}" alt="{{ item.name }}" class="w-9 h-9 object-cover rounded-[6px] border border-line">
+                {% else %}
+                  <div class="w-9 h-9 rounded-[6px] border-[1.5px] border-dashed border-line"></div>
+                {% endif %}
+              </td>
+              <td class="px-4 py-3 text-[13px] font-semibold">{{ item.name }}</td>
+              <td class="px-4 py-3 text-[13px]">{{ item.brand }}</td>
+              <td class="px-4 py-3 text-[13px]">{{ item.model_type }}</td>
+              <td class="px-4 py-3 text-[13px] font-mono">{{ item.serial_number|default:"—" }}</td>
+              <td class="px-4 py-3 text-[13px]">{{ item.acquisition_year }}</td>
+              <td class="px-4 py-3"><span class="badge badge-{{ item.status_color }}">{{ item.get_status_display }}</span></td>
+              <td class="px-4 py-3">
+                <div class="flex gap-2">
+                  <a href="{% url 'equipment_detail' item.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-green hover:opacity-90">Detail</a>
+                  <a href="{% url 'equipment_edit' item.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-amber hover:opacity-90">Edit</a>
+                  <a href="{% url 'equipment_delete' item.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-red hover:opacity-90">Hapus</a>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="10" class="text-center px-5 pt-11 pb-12 text-[13.5px] text-muted border-t border-line">
+                <div class="w-[38px] h-[38px] mx-auto mb-3 rounded-[10px] border-[1.5px] border-dashed border-line
+                            flex items-center justify-center text-line font-mono text-[15px]">···</div>
+                Belum ada barang.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="mt-4">
+      <button type="submit" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-ink hover:bg-brand-dark transition-colors">🏷️ Cetak Label QR Terpilih</button>
+    </div>
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="flex flex-wrap items-center justify-between gap-3 mt-4">
+      <p class="text-[12.5px] text-muted">
+        Menampilkan {{ page_obj.start_index }}–{{ page_obj.end_index }} dari {{ page_obj.paginator.count }} barang
+      </p>
+      <div class="flex items-center gap-1.5">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
+           class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">‹ Sebelumnya</a>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+          {% if num == page_obj.number %}
+            <span class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold text-white bg-brand">{{ num }}</span>
+          {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+            <a href="?page={{ num }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
+               class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">{{ num }}</a>
+          {% elif num == 1 or num == page_obj.paginator.num_pages %}
+            <a href="?page={{ num }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
+               class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">{{ num }}</a>
+          {% elif num == page_obj.number|add:"-3" or num == page_obj.number|add:"3" %}
+            <span class="px-1.5 text-[12.5px] text-muted">···</span>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
+           class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Selanjutnya ›</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </form>
+
+  <script>
+    document.getElementById('selectAll').addEventListener('change', function() {
+      document.querySelectorAll('.rowCheckbox').forEach(cb => cb.checked = this.checked);
+    });
+  </script>
+
+{% endblock %}
