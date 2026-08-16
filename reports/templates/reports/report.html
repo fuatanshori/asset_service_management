@@ -1,0 +1,149 @@
+{# reports/templates/reports/report.html #}
+{% extends "base.html" %}
+{% block title %}Laporan{% endblock %}
+{% block content %}
+
+  <p class="text-[12.5px] text-muted mb-6">Digenerate pada {{ generated_at|date:"d-m-Y H:i" }}</p>
+
+  <!-- A. Ringkasan Eksekutif -->
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
+    <h2 class="font-display text-[16px] font-semibold mb-4">📌 Ringkasan Eksekutif</h2>
+
+    <p class="text-[14px] mb-5">
+      Dari total <strong>{{ total_equipment }}</strong> barang:
+      <strong class="text-green">{{ status_breakdown.active }}</strong> Aktif,
+      <strong class="text-brand">{{ status_breakdown.scheduled }}</strong> Dijadwalkan,
+      <strong class="text-amber">{{ status_breakdown.under_repair }}</strong> Dalam Perbaikan,
+      dan <strong class="text-red">{{ status_breakdown.damaged }}</strong> Rusak.
+      {% if status_breakdown.damaged > 0 or status_breakdown.under_repair > 0 %}
+        <span class="text-red font-semibold">Perlu perhatian: {{ status_breakdown.damaged|add:status_breakdown.under_repair }} barang dalam kondisi tidak dapat digunakan/rusak</span>
+      {% endif %}
+      <br>
+      Biaya maintenance bulan ini <strong>Rp{{ cost_mom.this_month|floatformat:0 }}</strong>
+      {% if cost_mom.change_pct is None %}
+        {% if cost_mom.this_month > 0 %}
+          — ini biaya pertama tercatat bulan ini (bulan lalu tidak ada pengeluaran).
+        {% else %}
+          — belum ada pengeluaran tercatat bulan ini maupun bulan lalu.
+        {% endif %}
+      {% elif cost_mom.change_pct > 0 %}
+        — naik <strong class="text-red">{{ cost_mom.change_pct }}%</strong> dibanding bulan lalu (Rp{{ cost_mom.last_month|floatformat:0 }}).
+      {% elif cost_mom.change_pct < 0 %}
+        — turun <strong class="text-green">{{ cost_mom.change_pct|slice:"1:" }}%</strong> dibanding bulan lalu (Rp{{ cost_mom.last_month|floatformat:0 }}).
+      {% else %}
+        — sama seperti bulan lalu.
+      {% endif %}
+    </p>
+
+    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+      <div class="text-center p-3 rounded-[10px]" style="background:#F1F4F8;">
+        <div class="font-mono text-[22px] font-semibold">{{ total_equipment }}</div>
+        <div class="text-[11px] text-muted">Total Barang</div>
+      </div>
+      <div class="text-center p-3 rounded-[10px]" style="background:#E1F1E9;">
+        <div class="font-mono text-[22px] font-semibold text-green">{{ status_breakdown.active }}</div>
+        <div class="text-[11px] text-muted">Aktif</div>
+      </div>
+      <div class="text-center p-3 rounded-[10px]" style="background:#E2E9F1;">
+        <div class="font-mono text-[22px] font-semibold text-brand">{{ status_breakdown.scheduled }}</div>
+        <div class="text-[11px] text-muted">Dijadwalkan</div>
+      </div>
+      <div class="text-center p-3 rounded-[10px]" style="background:#F7E9D8;">
+        <div class="font-mono text-[22px] font-semibold text-amber">{{ status_breakdown.under_repair }}</div>
+        <div class="text-[11px] text-muted">Dalam Perbaikan</div>
+      </div>
+      <div class="text-center p-3 rounded-[10px]" style="background:#F8E2E0;">
+        <div class="font-mono text-[22px] font-semibold text-red">{{ status_breakdown.damaged }}</div>
+        <div class="text-[11px] text-muted">Rusak</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B. Kesehatan Aset -->
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
+    <h2 class="font-display text-[16px] font-semibold mb-4">📦 Kesehatan Aset</h2>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
+      <div><div class="text-[11px] text-muted">Aktif</div><div class="font-mono text-[18px] font-semibold text-green">{{ status_breakdown.active }}</div></div>
+      <div><div class="text-[11px] text-muted">Dijadwalkan</div><div class="font-mono text-[18px] font-semibold text-brand">{{ status_breakdown.scheduled }}</div></div>
+      <div><div class="text-[11px] text-muted">Dalam Perbaikan</div><div class="font-mono text-[18px] font-semibold text-amber">{{ status_breakdown.under_repair }}</div></div>
+      <div><div class="text-[11px] text-muted">Rusak</div><div class="font-mono text-[18px] font-semibold text-red">{{ status_breakdown.damaged }}</div></div>
+    </div>
+
+    <h3 class="text-[13px] font-semibold mb-2">⏳ Belum Diservis 6 Bulan Terakhir (atau Belum Pernah)</h3>
+    {% if stale_equipment %}
+      <ul class="divide-y divide-line">
+        {% for item in stale_equipment %}
+        <li class="py-2 flex justify-between text-[13.5px]">
+          <a href="{% url 'equipment_detail' item.pk %}" class="hover:text-brand">{{ item.name }} <span class="text-muted">({{ item.serial_number }})</span></a>
+          <span class="badge badge-{{ item.status_color }}">{{ item.get_status_display }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="text-[13px] text-muted">Semua barang punya riwayat servis dalam 6 bulan terakhir. 👍</p>
+    {% endif %}
+  </div>
+
+  <!-- C. Analisis Biaya -->
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
+    <h2 class="font-display text-[16px] font-semibold mb-4">💰 Analisis Biaya</h2>
+
+    <form method="get" class="flex flex-wrap items-end gap-3 mb-5">
+      <div><label class="field-label">{{ filter_form.date_from.label }}</label>{{ filter_form.date_from }}</div>
+      <div><label class="field-label">{{ filter_form.date_to.label }}</label>{{ filter_form.date_to }}</div>
+      <button type="submit" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Terapkan</button>
+      {% if is_filtered %}<a href="{% url 'report' %}" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Reset</a>{% endif %}
+    </form>
+    <p class="text-[11px] text-muted mb-4">Filter berdasarkan tanggal kerjaan beneran selesai (bukan tanggal jadwal dibuat).</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
+      <div><div class="text-[11px] text-muted">Biaya Tahun Ini</div><div class="font-mono text-[18px] font-semibold">Rp{{ cost_summary.this_year|floatformat:0 }}</div></div>
+      <div><div class="text-[11px] text-muted">Total Sepanjang Waktu</div><div class="font-mono text-[18px] font-semibold">Rp{{ cost_summary.all_time|floatformat:0 }}</div></div>
+      <div><div class="text-[11px] text-muted">Rata-rata / Servis</div><div class="font-mono text-[18px] font-semibold">Rp{{ cost_summary.avg_per_service|floatformat:0 }}</div></div>
+    </div>
+
+    <h3 class="text-[13px] font-semibold mb-2">Tren Biaya per Bulan</h3>
+    {% if cost_trend %}
+    <table class="w-full text-[13px] border-collapse mb-5">
+      <thead><tr class="border-b border-line"><th class="text-left py-2">Bulan</th><th class="text-right py-2">Total Biaya</th></tr></thead>
+      <tbody>
+        {% for label, value in cost_trend %}
+        <tr class="border-b border-line"><td class="py-1.5">{{ label }}</td><td class="py-1.5 text-right font-mono">Rp{{ value|floatformat:0 }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-[13px] text-muted mb-5">Belum ada riwayat yang selesai di rentang ini.</p>
+    {% endif %}
+
+    <h3 class="text-[13px] font-semibold mb-2">Barang Paling Boros Biaya Servis</h3>
+    {% if cost_by_equipment %}
+    <table class="w-full text-[13px] border-collapse">
+      <thead><tr class="border-b border-line"><th class="text-left py-2">Barang</th><th class="text-right py-2">Jumlah Servis</th><th class="text-right py-2">Total Biaya</th></tr></thead>
+      <tbody>
+        {% for row in cost_by_equipment %}
+        <tr class="border-b border-line">
+          <td class="py-1.5">{{ row.schedule__equipment__name }} <span class="text-muted">({{ row.schedule__equipment__serial_number }})</span></td>
+          <td class="py-1.5 text-right">{{ row.service_count }}x</td>
+          <td class="py-1.5 text-right font-mono">Rp{{ row.total_cost|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="text-[13px] text-muted">Belum ada data biaya di rentang ini.</p>
+    {% endif %}
+  </div>
+
+  <!-- F. Lampiran Data Mentah -->
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+    <h2 class="font-display text-[16px] font-semibold mb-3">📄 Lampiran Data Mentah</h2>
+    <p class="text-[13.5px] text-muted mb-4">Butuh data lengkap per baris? Download langsung, atau buka <a href="{% url 'equipment_list' %}" class="text-brand hover:underline">Data Barang</a> buat lihat/filter satu-satu.</p>
+    <div class="flex flex-wrap gap-2.5">
+      <a href="{% url 'equipment_export' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬇️ Data Barang (Excel)</a>
+      <a href="{% url 'schedule_export' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬇️ Jadwal &amp; Riwayat (Excel)</a>
+      <a href="{% url 'report_export_full' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">⬇️ Semua Sekaligus (Excel Multi-Sheet)</a>
+    </div>
+  </div>
+
+{% endblock %}
