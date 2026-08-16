@@ -1,0 +1,61 @@
+services:
+  asset-service-management:
+    container_name: asset-service-management
+    image: fuatanshori12/asset-service-management:latest
+    build: .
+    env_file:
+      - .env
+    restart: always
+    depends_on:
+      asset-service-management-db:
+        condition: service_healthy
+    volumes:
+      - asset_service_management_system_media:/app/media
+    ports:
+      - "127.0.0.1:8000:8000"
+    command: bash -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8000 --timeout 600 --workers 1 core.wsgi:application"
+    networks:
+      - asset-service-management-network
+
+  asset-service-management-db:
+    container_name: asset-service-management-db
+    image: mysql
+    restart: always
+    env_file:
+      - .env
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Jakarta
+    volumes:
+      - asset_service_management_system_db:/var/lib/mysql
+    command: --default-time-zone='Asia/Jakarta'
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - asset-service-management-network
+
+  asset-service-management-cloudflared:
+    container_name: asset-service-management-cloudflared
+    image: cloudflare/cloudflared:latest
+    restart: always
+    command: tunnel run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - asset-service-management
+    networks:
+      - asset-service-management-network
+
+volumes:
+  asset_service_management_system_db:
+  asset_service_management_system_media:
+
+networks:
+  asset-service-management-network:
+    driver: bridge
