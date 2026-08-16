@@ -1,0 +1,88 @@
+{# maintenance/templates/maintenance/log_form.html #}
+{% extends "base.html" %}
+{% block title %}Riwayat Maintenance{% endblock %}
+{% block content %}
+
+  <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+    <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">Riwayat Maintenance</h1>
+    <a href="{% url 'schedule_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Kembali</a>
+  </div>
+
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5 max-w-[720px]">
+    <p class="text-[13.5px] text-muted">
+      Jadwal <strong class="text-ink">{{ schedule.get_maintenance_type_display }}</strong>
+      untuk <strong class="text-ink">{{ schedule.equipment.name }}</strong> ({{ schedule.equipment.serial_number }}),
+      dijadwalkan {{ schedule.scheduled_date|date:"d-m-Y" }}.
+      Status barang ikut ter-update otomatis mengikuti Status di bawah.
+    </p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="bg-white border border-line rounded-xl2 p-5 sm:p-6 max-w-[720px]">
+    {% csrf_token %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {% for field in form %}
+        {% if field.name != "photo_before" and field.name != "photo_after" and field.name != "photo_receipt" and field.name != "completed_date" %}
+        <div class="{% if field.name == 'action_taken' %}sm:col-span-2{% endif %}">
+          <label class="field-label">{{ field.label }}</label>
+          {{ field }}
+          {% if field.errors %}<p class="text-[12px] text-red mt-1">{{ field.errors|join:", " }}</p>{% endif %}
+        </div>
+        {% endif %}
+      {% endfor %}
+
+      <div id="completedDateWrapper" style="display: none;">
+        <label class="field-label">{{ form.completed_date.label }}</label>
+        {{ form.completed_date }}
+        <p class="text-[11px] text-muted mt-1">Otomatis terisi begitu Result diubah ke Selesai/Gagal — boleh dikoreksi manual kalau perlu.</p>
+        {% if form.completed_date.errors %}<p class="text-[12px] text-red mt-1">{{ form.completed_date.errors|join:", " }}</p>{% endif %}
+      </div>
+    </div>
+
+    <div class="mt-5 pt-5 border-t border-line">
+      <label class="field-label mb-3 block">Dokumentasi Foto (opsional)</label>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <span class="field-label">Foto Sebelum</span>
+          {% if log.photo_before %}
+            <img src="{{ log.photo_before.url }}" alt="Foto sebelum" class="w-full h-28 object-cover rounded-[10px] border border-line mb-2">
+          {% endif %}
+          {{ form.photo_before }}
+          {% if form.photo_before.errors %}<p class="text-[12px] text-red mt-1">{{ form.photo_before.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div>
+          <span class="field-label">Foto Sesudah</span>
+          {% if log.photo_after %}
+            <img src="{{ log.photo_after.url }}" alt="Foto sesudah" class="w-full h-28 object-cover rounded-[10px] border border-line mb-2">
+          {% endif %}
+          {{ form.photo_after }}
+          {% if form.photo_after.errors %}<p class="text-[12px] text-red mt-1">{{ form.photo_after.errors|join:", " }}</p>{% endif %}
+        </div>
+        <div>
+          <span class="field-label">Foto Kwitansi</span>
+          {% if log.photo_receipt %}
+            <img src="{{ log.photo_receipt.url }}" alt="Foto kwitansi" class="w-full h-28 object-cover rounded-[10px] border border-line mb-2">
+          {% endif %}
+          {{ form.photo_receipt }}
+          {% if form.photo_receipt.errors %}<p class="text-[12px] text-red mt-1">{{ form.photo_receipt.errors|join:", " }}</p>{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-2.5 mt-6">
+      <button type="submit" class="px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Simpan</button>
+      <a href="{% url 'schedule_list' %}" class="px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Batal</a>
+    </div>
+  </form>
+<script>
+    const resultSelect = document.getElementById('id_result');
+    const completedDateWrapper = document.getElementById('completedDateWrapper');
+    const COMPLETION_VALUES = ['completed', 'failed'];
+
+    function toggleCompletedDate() {
+      completedDateWrapper.style.display = COMPLETION_VALUES.includes(resultSelect.value) ? 'block' : 'none';
+    }
+
+    resultSelect.addEventListener('change', toggleCompletedDate);
+    toggleCompletedDate(); // set kondisi awal pas halaman dibuka
+  </script>
+{% endblock %}

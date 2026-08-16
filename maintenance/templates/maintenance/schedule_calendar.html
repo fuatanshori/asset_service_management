@@ -1,0 +1,38 @@
+{# maintenance/templates/maintenance/schedule_calendar.html #}
+{% extends "base.html" %}
+{% block title %}Kalender Maintenance{% endblock %}
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<style>
+  .fc { font-family: 'Inter', sans-serif; font-size: 13px; }
+  .fc-toolbar-title { font-family: 'Space Grotesk', sans-serif; font-size: 18px !important; }
+  .fc-daygrid-event { border-radius: 6px; padding: 1px 4px; }
+</style>
+{% endblock %}
+{% block content %}
+
+  <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+    <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">Kalender Maintenance</h1>
+    <a href="{% url 'schedule_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Tampilan Tabel</a>
+  </div>
+
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+    <div id="calendar"></div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const calendarEl = document.getElementById('calendar');
+      const calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'id',
+        height: 'auto',
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
+        events: "{% url 'schedule_calendar_events' %}",
+      });
+      calendar.render();
+    });
+  </script>
+
+{% endblock %}
