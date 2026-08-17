@@ -19,8 +19,12 @@
   <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
     <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">{{ equipment.name }}</h1>
     <div class="flex gap-2.5">
+      {% if user.is_authenticated %}
       <a href="{% url 'equipment_edit' equipment.pk %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-amber hover:opacity-90 transition-colors">Edit</a>
       <a href="{% url 'equipment_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Kembali</a>
+      {% else %}
+      <a href="{% url 'scan' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">← Scan Lagi</a>
+      {% endif %}
     </div>
   </div>
 
@@ -79,20 +83,24 @@
         Scan QR ini untuk langsung membuka halaman detail barang ini (lengkap dengan riwayat maintenance-nya).
         Cetak dan tempel pada barang fisik.
       </p>
+      {% if user.is_authenticated %}
       <a href="{% url 'equipment_qrcode_print' equipment.pk %}" target="_blank"
          class="inline-block px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-ink hover:bg-brand-dark transition-colors">
         🖨️ Cetak Label QR
       </a>
+      {% endif %}
     </div>
   </div>
 
   <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
     <div class="flex justify-between items-center mb-3">
       <h2 class="font-display text-[16px] font-semibold">🗓️ Jadwal &amp; Riwayat Maintenance</h2>
-      {% if equipment.status == "under_repair" or equipment.status == "scheduled" %}
-      <span class="px-3.5 py-2 rounded-[10px] text-[12.5px] font-semibold text-muted bg-bg cursor-not-allowed" title="Barang sedang {{ equipment.get_status_display }}, tidak bisa ditambahkan jadwal baru">+ Tambah</span>
-      {% else %}
-      <a href="{% url 'schedule_add' %}?equipment={{ equipment.pk }}&next={{ request.get_full_path|urlencode }}" class="px-3.5 py-2 rounded-[10px] text-[12.5px] font-semibold text-white bg-ink hover:bg-brand-dark transition-colors">+ Tambah</a>
+      {% if user.is_authenticated %}
+        {% if equipment.status == "under_repair" or equipment.status == "scheduled" %}
+        <span class="px-3.5 py-2 rounded-[10px] text-[12.5px] font-semibold text-muted bg-bg cursor-not-allowed" title="Barang sedang {{ equipment.get_status_display }}, tidak bisa ditambahkan jadwal baru">+ Tambah</span>
+        {% else %}
+        <a href="{% url 'schedule_add' %}?equipment={{ equipment.pk }}&next={{ request.get_full_path|urlencode }}" class="px-3.5 py-2 rounded-[10px] text-[12.5px] font-semibold text-white bg-ink hover:bg-brand-dark transition-colors">+ Tambah</a>
+        {% endif %}
       {% endif %}
     </div>
     {% if schedule_list %}
@@ -105,7 +113,9 @@
               <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold pb-2">Teknisi</th>
               <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold pb-2">Hasil</th>
               <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold pb-2">Biaya</th>
+              {% if user.is_authenticated %}
               <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold pb-2">Aksi</th>
+              {% endif %}
             </tr>
           </thead>
           <tbody class="divide-y divide-line">
@@ -122,6 +132,7 @@
                 {% endif %}
               </td>
               <td class="py-2.5 font-mono">{% if s.log %}Rp{{ s.log.cost|floatformat:0 }}{% else %}—{% endif %}</td>
+              {% if user.is_authenticated %}
               <td class="py-2.5">
                 <div class="flex gap-2 flex-wrap">
                   <a href="{% url 'schedule_edit' s.pk %}?next={{ request.get_full_path|urlencode }}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-amber hover:opacity-90">Edit Jadwal</a>
@@ -131,12 +142,15 @@
                   <a href="{% url 'schedule_delete' s.pk %}?next={{ request.get_full_path|urlencode }}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-red hover:opacity-90">Hapus</a>
                 </div>
               </td>
+              {% endif %}
             </tr>
             {% endfor %}
           </tbody>
         </table>
       </div>
+      {% if user.is_authenticated %}
       <a href="{% url 'schedule_list' %}?q={{ equipment.name|urlencode }}" class="inline-block mt-3 text-[12.5px] font-semibold text-brand hover:underline">Lihat semua jadwal &amp; riwayat barang ini →</a>
+      {% endif %}
     {% else %}
       <p class="text-[13.5px] text-muted">Belum ada jadwal maupun riwayat maintenance.</p>
     {% endif %}

@@ -5,6 +5,7 @@ import json
 
 import qrcode
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
@@ -38,6 +39,7 @@ def equipment_export_row(item):
 
 # ---------- Equipment ----------
 
+@login_required
 def equipment_list(request):
     form = EquipmentFilterForm(request.GET or None)
     qs = Equipment.objects.all()
@@ -79,6 +81,11 @@ def equipment_list(request):
 
 
 def equipment_detail(request, pk):
+    """Sengaja PUBLIK (tidak login_required) — halaman ini yang dituju QR
+    code fisik di barang, jadi siapapun yang scan bisa langsung lihat info
+    & riwayat tanpa perlu login dulu. Read-only: tombol aksi (Edit,
+    Tambah, dst) di template disembunyikan untuk pengunjung yang belum
+    login lewat pengecekan {% if user.is_authenticated %}."""
     item = get_object_or_404(Equipment, pk=pk)
     context = {
         "active_page": "equipment",
@@ -88,6 +95,7 @@ def equipment_detail(request, pk):
     return render(request, "equipment/equipment_detail.html", context)
 
 
+@login_required
 def equipment_add(request):
     if request.method == "POST":
         form = EquipmentForm(request.POST, request.FILES)
@@ -102,6 +110,7 @@ def equipment_add(request):
     )
 
 
+@login_required
 def equipment_edit(request, pk):
     item = get_object_or_404(Equipment, pk=pk)
     if request.method == "POST":
@@ -119,6 +128,7 @@ def equipment_edit(request, pk):
     )
 
 
+@login_required
 def equipment_delete(request, pk):
     item = get_object_or_404(Equipment, pk=pk)
     if request.method == "POST":
@@ -131,11 +141,13 @@ def equipment_delete(request, pk):
     )
 
 
+@login_required
 def equipment_search(request):
     """AJAX endpoint untuk search-as-you-type di form Jadwal (app maintenance).
     Barang yang sedang "Dalam Perbaikan" atau "Dijadwalkan" sengaja tidak
     ikut muncul, karena tidak boleh ditambahkan jadwal baru (cegah
-    double-booking)."""
+    double-booking). Login-protected karena cuma dipakai dari dalam form
+    Jadwal yang juga wajib login."""
     q = request.GET.get("q", "").strip()
     qs = Equipment.objects.exclude(status__in=[Equipment.STATUS_UNDER_REPAIR, Equipment.STATUS_SCHEDULED])
     if q:
@@ -144,6 +156,7 @@ def equipment_search(request):
     return JsonResponse({"results": results})
 
 
+@login_required
 def equipment_export(request):
     qs = Equipment.objects.all()
     status = request.GET.get("status")
@@ -163,6 +176,7 @@ def equipment_export(request):
     return response
 
 
+@login_required
 def equipment_map(request):
     items = Equipment.objects.filter(latitude__isnull=False, longitude__isnull=False)
     markers = [
@@ -184,6 +198,10 @@ def equipment_map(request):
 
 
 def equipment_qrcode(request, pk):
+    """Sengaja PUBLIK — ini gambar QR code itu sendiri, di-embed lewat
+    <img> di halaman Detail Barang yang juga publik. Kalau ini
+    login_required, gambarnya nggak bakal muncul buat pengunjung yang
+    belum login."""
     item = get_object_or_404(Equipment, pk=pk)
     detail_url = request.build_absolute_uri(item.get_absolute_url())
     try:
@@ -202,11 +220,13 @@ def equipment_qrcode(request, pk):
     return HttpResponse(buffer.getvalue(), content_type="image/png")
 
 
+@login_required
 def equipment_qrcode_print(request, pk):
     item = get_object_or_404(Equipment, pk=pk)
     return render(request, "equipment/equipment_qrcode_print.html", {"equipment": item})
 
 
+@login_required
 def equipment_qrcode_print_bulk(request):
     ids = request.GET.getlist("ids")
     items = Equipment.objects.filter(pk__in=ids)
@@ -216,4 +236,8 @@ def equipment_qrcode_print_bulk(request):
 # ---------- Scan ----------
 
 def scan_view(request):
+    """Sengaja PUBLIK — halaman scan kamera dipakai di lapangan sebelum
+    tentu sempat login. Link "Cari Manual" di halaman ini mengarah ke
+    equipment_list yang wajib login, jadi pengunjung anonim yang pakai
+    fitur itu bakal diarahkan ke halaman login dulu — itu sesuai desain."""
     return render(request, "equipment/scan.html", {"active_page": "scan"})

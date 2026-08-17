@@ -35,7 +35,7 @@
       {% endif %}
     </p>
 
-    <div class="grid grid-cols-2 sm:grid-cols-5 gap-4">
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
       <div class="text-center p-3 rounded-[10px]" style="background:#F1F4F8;">
         <div class="font-mono text-[22px] font-semibold">{{ total_equipment }}</div>
         <div class="text-[11px] text-muted">Total Barang</div>
@@ -73,9 +73,9 @@
     {% if stale_equipment %}
       <ul class="divide-y divide-line">
         {% for item in stale_equipment %}
-        <li class="py-2 flex justify-between text-[13.5px]">
-          <a href="{% url 'equipment_detail' item.pk %}" class="hover:text-brand">{{ item.name }} <span class="text-muted">({{ item.serial_number }})</span></a>
-          <span class="badge badge-{{ item.status_color }}">{{ item.get_status_display }}</span>
+        <li class="py-2 flex flex-wrap items-center justify-between gap-2 text-[13.5px]">
+          <a href="{% url 'equipment_detail' item.pk %}" class="hover:text-brand break-words">{{ item.name }} <span class="text-muted">({{ item.serial_number }})</span></a>
+          <span class="badge badge-{{ item.status_color }} flex-shrink-0">{{ item.get_status_display }}</span>
         </li>
         {% endfor %}
       </ul>
@@ -88,11 +88,13 @@
   <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
     <h2 class="font-display text-[16px] font-semibold mb-4">💰 Analisis Biaya</h2>
 
-    <form method="get" class="flex flex-wrap items-end gap-3 mb-5">
+    <form method="get" class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end mb-5">
       <div><label class="field-label">{{ filter_form.date_from.label }}</label>{{ filter_form.date_from }}</div>
       <div><label class="field-label">{{ filter_form.date_to.label }}</label>{{ filter_form.date_to }}</div>
-      <button type="submit" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Terapkan</button>
-      {% if is_filtered %}<a href="{% url 'report' %}" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Reset</a>{% endif %}
+      <div class="flex gap-2.5">
+        <button type="submit" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Terapkan</button>
+        {% if is_filtered %}<a href="{% url 'report' %}" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Reset</a>{% endif %}
+      </div>
     </form>
     <p class="text-[11px] text-muted mb-4">Filter berdasarkan tanggal kerjaan beneran selesai (bukan tanggal jadwal dibuat).</p>
 
@@ -104,32 +106,36 @@
 
     <h3 class="text-[13px] font-semibold mb-2">Tren Biaya per Bulan</h3>
     {% if cost_trend %}
-    <table class="w-full text-[13px] border-collapse mb-5">
-      <thead><tr class="border-b border-line"><th class="text-left py-2">Bulan</th><th class="text-right py-2">Total Biaya</th></tr></thead>
-      <tbody>
-        {% for label, value in cost_trend %}
-        <tr class="border-b border-line"><td class="py-1.5">{{ label }}</td><td class="py-1.5 text-right font-mono">Rp{{ value|floatformat:0 }}</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="overflow-x-auto mb-5">
+      <table class="w-full min-w-[320px] text-[13px] border-collapse">
+        <thead><tr class="border-b border-line"><th class="text-left py-2">Bulan</th><th class="text-right py-2">Total Biaya</th></tr></thead>
+        <tbody>
+          {% for label, value in cost_trend %}
+          <tr class="border-b border-line"><td class="py-1.5">{{ label }}</td><td class="py-1.5 text-right font-mono">Rp{{ value|floatformat:0 }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     {% else %}
     <p class="text-[13px] text-muted mb-5">Belum ada riwayat yang selesai di rentang ini.</p>
     {% endif %}
 
     <h3 class="text-[13px] font-semibold mb-2">Barang Paling Boros Biaya Servis</h3>
     {% if cost_by_equipment %}
-    <table class="w-full text-[13px] border-collapse">
-      <thead><tr class="border-b border-line"><th class="text-left py-2">Barang</th><th class="text-right py-2">Jumlah Servis</th><th class="text-right py-2">Total Biaya</th></tr></thead>
-      <tbody>
-        {% for row in cost_by_equipment %}
-        <tr class="border-b border-line">
-          <td class="py-1.5">{{ row.schedule__equipment__name }} <span class="text-muted">({{ row.schedule__equipment__serial_number }})</span></td>
-          <td class="py-1.5 text-right">{{ row.service_count }}x</td>
-          <td class="py-1.5 text-right font-mono">Rp{{ row.total_cost|floatformat:0 }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[480px] text-[13px] border-collapse">
+        <thead><tr class="border-b border-line"><th class="text-left py-2">Barang</th><th class="text-right py-2">Jumlah Servis</th><th class="text-right py-2">Total Biaya</th></tr></thead>
+        <tbody>
+          {% for row in cost_by_equipment %}
+          <tr class="border-b border-line">
+            <td class="py-1.5">{{ row.schedule__equipment__name }} <span class="text-muted">({{ row.schedule__equipment__serial_number }})</span></td>
+            <td class="py-1.5 text-right">{{ row.service_count }}x</td>
+            <td class="py-1.5 text-right font-mono">Rp{{ row.total_cost|floatformat:0 }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
     {% else %}
     <p class="text-[13px] text-muted">Belum ada data biaya di rentang ini.</p>
     {% endif %}

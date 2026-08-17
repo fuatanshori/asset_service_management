@@ -1,5 +1,6 @@
 #dashboard/views.py
 
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import render
 import json
@@ -25,6 +26,7 @@ def _preserve_params(get_params, exclude_prefix):
     return [(k, v) for k, v in get_params.items() if not k.startswith(prefix)]
 
 
+@login_required
 def dashboard(request):
     cost_filter = WidgetDateFilterForm(request.GET, prefix="cost")
     type_filter = WidgetDateFilterForm(request.GET, prefix="type")
@@ -107,6 +109,7 @@ def dashboard(request):
     return render(request, "dashboard/dashboard.html", context)
 
 
+@login_required
 def equipment_service_ranking(request):
     filter_form = WidgetDateFilterForm(request.GET, prefix="f")
     filter_form.is_valid()
@@ -129,6 +132,7 @@ def equipment_service_ranking(request):
     )
 
 
+@login_required
 def technician_ranking(request):
     filter_form = WidgetDateFilterForm(request.GET, prefix="f")
     filter_form.is_valid()

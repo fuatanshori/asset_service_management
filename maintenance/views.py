@@ -1,4 +1,5 @@
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -71,6 +72,7 @@ def schedule_export_row(s):
 
 # ---------- Maintenance schedule ----------
 
+@login_required
 def schedule_list(request):
     form = ScheduleFilterForm(request.GET or None)
     qs = MaintenanceSchedule.objects.select_related("equipment", "log").all()
@@ -92,6 +94,7 @@ def schedule_list(request):
     return render(request, "maintenance/schedule_list.html", context)
 
 
+@login_required
 def schedule_add(request):
     """Buat jadwal baru. Default balik ke daftar Jadwal — TAPI kalau
     diakses dengan ?next=<url>, balik ke situ (misal dari halaman Detail
@@ -139,6 +142,7 @@ def schedule_add(request):
     )
 
 
+@login_required
 def schedule_edit(request, pk):
     """Default balik ke daftar Jadwal, kecuali diakses dengan
     ?next=<url> (misal dari Detail Barang)."""
@@ -165,6 +169,7 @@ def schedule_edit(request, pk):
     )
 
 
+@login_required
 def schedule_delete(request, pk):
     """Hapus jadwal. Default balik ke daftar Jadwal, kecuali diakses
     dengan ?next=<url>."""
@@ -190,6 +195,7 @@ def schedule_delete(request, pk):
     )
 
 
+@login_required
 def schedule_calendar(request):
     return render(request, "maintenance/schedule_calendar.html", {"active_page": "maintenance"})
 
@@ -197,6 +203,7 @@ def schedule_calendar(request):
 COLOR_HEX = {"green": "#328A63", "amber": "#C97A2E", "red": "#C0483F", "brand": "#2A5C8A", "muted": "#5E6B7C"}
 
 
+@login_required
 def schedule_calendar_events(request):
     events = []
     for s in MaintenanceSchedule.objects.select_related("equipment", "log").all():
@@ -210,6 +217,7 @@ def schedule_calendar_events(request):
     return JsonResponse(events, safe=False)
 
 
+@login_required
 def schedule_export(request):
     qs = MaintenanceSchedule.objects.select_related("equipment", "log").all()
     date_from = request.GET.get("date_from")
@@ -234,6 +242,7 @@ def schedule_export(request):
 
 # ---------- Maintenance log (riwayat) ----------
 
+@login_required
 def log_list(request):
     form = LogFilterForm(request.GET or None)
     qs = MaintenanceLog.objects.select_related("schedule__equipment").all()
@@ -251,6 +260,7 @@ def log_list(request):
     return render(request, "maintenance/log_list.html", context)
 
 
+@login_required
 def log_edit(request, pk):
     """Default balik ke daftar Riwayat, kecuali diakses dengan
     ?next=<url> (misal dari Detail Barang atau daftar Jadwal)."""

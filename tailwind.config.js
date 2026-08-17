@@ -2,10 +2,13 @@
 export default {
   content: [
     "./templates/**/*.html",
+    "./templates/*.html",
     "./equipment/templates/**/*.html",
     "./maintenance/templates/**/*.html",
     "./dashboard/templates/**/*.html",
     "./reports/templates/**/*.html",
+    "./templates/registration/*.html",
+    "./static/**/*.js",
   ],
   theme: {
     extend: {

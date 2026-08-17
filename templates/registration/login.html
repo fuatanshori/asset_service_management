@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+
+<div class="min-h-[calc(100vh-120px)] flex items-center justify-center px-4">
+    <div class="w-full max-w-[350px]">
+
+        <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+
+            <div class="mb-5">
+                <h1 class="font-display text-[20px] font-semibold mb-1 text-center">
+                    Masuk
+                </h1>
+
+                <p class="text-[13px] text-muted text-center leading-relaxed">
+                    Masuk untuk mengelola data barang &amp; maintenance.
+                </p>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="mb-4 px-3.5 py-2.5 rounded-[10px] text-[13px] font-medium bg-[#F8E2E0] text-red">
+                    {{ form.non_field_errors|join:", " }}
+                </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+
+                <input type="hidden" name="next" value="{{ next }}">
+
+                <div class="mb-3.5">
+                    <label class="field-label" for="id_username">
+                        Username
+                    </label>
+
+                    <input
+                        type="text"
+                        name="username"
+                        id="id_username"
+                        class="field-input"
+                        autocomplete="username"
+                        autofocus
+                        required
+                    >
+                </div>
+
+                <div class="mb-4">
+                    <label class="field-label" for="id_password">
+                        Password
+                    </label>
+
+                    <input
+                        type="password"
+                        name="password"
+                        id="id_password"
+                        class="field-input"
+                        autocomplete="current-password"
+                        required
+                    >
+                </div>
+
+                <button
+                    type="submit"
+                    class="w-full px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors"
+                >
+                    Masuk
+                </button>
+            </form>
+
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

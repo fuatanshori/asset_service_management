@@ -1,4 +1,5 @@
 # reports/views.py
+from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -19,6 +20,7 @@ from maintenance.views import SCHEDULE_EXPORT_HEADERS, schedule_export_row
 from .forms import ReportFilterForm
 
 
+@login_required
 def report_view(request):
     filter_form = ReportFilterForm(request.GET)
     filter_form.is_valid()
@@ -43,12 +45,14 @@ def report_view(request):
     return render(request, "reports/report.html", context)
 
 
+@login_required
 def report_detail_redirect(request):
     """URL lama /laporan/detail/ sekarang digabung ke /laporan/ —
     redirect biar link/bookmark lama gak 404."""
     return redirect("report")
 
 
+@login_required
 def report_export_full(request):
     """Excel satu file isinya banyak sheet — pakai helper baris yang sama
     persis dengan equipment_export & schedule_export (app equipment &
