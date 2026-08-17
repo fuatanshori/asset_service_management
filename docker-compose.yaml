@@ -5,6 +5,8 @@ services:
     build: .
     env_file:
       - .env
+    environment:
+      MYSQL_HOST: asset-service-management-db
     restart: always
     depends_on:
       asset-service-management-db:
@@ -19,7 +21,7 @@ services:
 
   asset-service-management-db:
     container_name: asset-service-management-db
-    image: mysql
+    image: mysql:8.0
     restart: always
     env_file:
       - .env

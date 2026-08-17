@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 import os
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -20,22 +21,33 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-r9isn0c$jcwhu50vy329+_c#kov^80*uk=@b1pa+^jb2tu*0*v",  # fallback cuma buat dev lokal
-)
+# Fail-fast: kalau DJANGO_SECRET_KEY lupa di-set di .env, app gak jalan
+# sama sekali (lebih baik daripada diam-diam pakai key yang ke-hardcode).
+SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["project.fuatanshori.com", "localhost", "127.0.0.1","*"]
+ALLOWED_HOSTS = ["project.fuatanshori.com", "localhost", "127.0.0.1"]
+
 CSRF_TRUSTED_ORIGINS = [
     "https://project.fuatanshori.com",
     "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
+
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
+
+# Cookie & transport hardening — aman dipasang karena Cloudflare selalu
+# serve ke user lewat HTTPS.
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+X_FRAME_OPTIONS = "DENY"
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -54,7 +66,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    "whitenoise.middleware.WhiteNoiseMiddleware", 
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -68,7 +80,9 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': ['templates'],
+        # Absolut, bukan relatif — biar gak tergantung current working
+        # directory pas gunicorn dijalanin.
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -88,25 +102,16 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('MYSQL_DATABASE'),
+        'USER': os.environ.get('MYSQL_USER'),
+        'PASSWORD': os.environ.get('MYSQL_PASSWORD'),
+        # Nama service MySQL di docker-compose, bukan container name lama.
+        'HOST': os.environ.get('MYSQL_HOST', 'asset-service-management-db'),
+        'PORT': os.environ.get('MYSQL_PORT', '3306'),
+        'OPTIONS': {'charset': 'utf8mb4'},
     }
 }
-# if DEBUG:
-#     # Dev lokal — SQLite, gampang, gak perlu nyalain MySQL segala.
-# else:
-#     # Produksi — WAJIB MySQL, biar data persisten lewat db_volume.
-#     DATABASES = {
-#         'default': {
-#             'ENGINE': 'django.db.backends.mysql',
-#             'NAME': os.environ.get('MYSQL_DATABASE'),
-#             'USER': os.environ.get('MYSQL_USER'),
-#             'PASSWORD': os.environ.get('MYSQL_PASSWORD'),
-#             'HOST': os.environ.get('MYSQL_HOST', 'db_manajemen_alat'),
-#             'PORT': os.environ.get('MYSQL_PORT', '3306'),
-#             'OPTIONS': {'charset': 'utf8mb4'},
-#         }
-#     }
 
 
 # Password validation
@@ -126,6 +131,7 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
@@ -148,26 +154,29 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.1/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = 'nginx/staticfiles'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
-    BASE_DIR/'static',    
+    BASE_DIR / 'static',
 ]
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Storage config — satu-satunya tempat static/default storage didefine.
+# Jangan dobel sama STATICFILES_STORAGE, karena STORAGES yang menang dan
+# bakal nge-override diam-diam.
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
