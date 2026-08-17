@@ -206,3 +206,107 @@
     background: #E2E9F1;
     color: #2A5C8A;
   }
+  /* =========================
+   NAV & SIDEBAR LINKS — tambah flex+gap buat icon
+   (ganti definisi .nav-link dan .sidebar-link yang lama dengan ini)
+========================= */
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #5E6B7C;
+  transition: background-color .15s, color .15s;
+  white-space: nowrap;
+}
+
+.nav-link:hover {
+  background: #F1F4F8;
+  color: #14213D;
+}
+
+.nav-link.active {
+  background: #2A5C8A;
+  color: #fff;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 15px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #5E6B7C;
+  transition: background-color .15s, color .15s;
+}
+
+.sidebar-link:hover {
+  background: #F1F4F8;
+  color: #14213D;
+}
+
+.sidebar-link.active {
+  background: #2A5C8A;
+  color: #fff;
+}
+
+/* =========================
+   NEW: sidebar section eyebrow
+========================= */
+
+.sidebar-eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8B96A5;
+  padding: 14px 15px 6px;
+}
+
+.sidebar-eyebrow:first-child {
+  padding-top: 6px;
+}
+
+/* =========================
+   NEW: user avatar chip (header + sidebar)
+========================= */
+
+.user-chip {
+  width: 30px;
+  height: 30px;
+  border-radius: 9999px;
+  background: #E2E9F1;
+  color: #2A5C8A;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* =========================
+   NEW: asset-tag accent strip (dipakai di header bawah & footer atas)
+========================= */
+
+.tag-strip {
+  height: 3px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #2A5C8A 0px, #2A5C8A 2px,
+    transparent 2px, transparent 5px,
+    #2A5C8A 5px, #2A5C8A 6px,
+    transparent 6px, transparent 10px,
+    #2A5C8A 10px, #2A5C8A 13px,
+    transparent 13px, transparent 16px
+  );
+  opacity: 0.18;
+}

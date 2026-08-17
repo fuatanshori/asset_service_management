@@ -43,7 +43,7 @@
 
     <p id="cameraError" class="hidden text-[13px] text-red mt-3"></p>
   </div>
-
+  {% if request.user.is_authenticated %}
   <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
     <h2 class="font-display text-[16px] font-semibold mb-4 flex items-center gap-2">🔍 Cari Manual</h2>
     <p class="text-[13.5px] text-muted mb-4">Tidak ada QR di tangan, atau kamera tidak tersedia? Cari barangnya langsung dari daftar.</p>
@@ -53,6 +53,7 @@
       <button type="submit" class="px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Cari</button>
     </form>
   </div>
+  {% endif %}
 
   <script>
     let html5QrCode = null;

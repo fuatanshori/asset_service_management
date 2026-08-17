@@ -15,10 +15,12 @@
     {% block extra_head %}{% endblock %}
 </head>
 
-<body class="bg-bg text-ink font-sans antialiased min-h-screen">
-    <header class="bg-white sticky top-0 z-30">
+<body class="bg-bg text-ink font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- ============ HEADER ============ -->
+    <header class="bg-white sticky top-0 z-30 border-b border-line">
         <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-3">
                 <button onclick="openSidebar()" class="lg:hidden p-2 -ml-2 rounded-[8px] hover:bg-bg transition-colors" aria-label="Buka menu">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#14213D" stroke-width="2" stroke-linecap="round">
                         <line x1="3" y1="6" x2="21" y2="6"/>
@@ -31,45 +33,96 @@
                     <div class="ihc-logo">
                         <img src="{% static 'assets/img/ihc.png' %}" alt="Logo IHC">
                     </div>
-                    <span class="hidden sm:inline font-display text-[16px] font-semibold text-brand">Manajemen Alat</span>
+                    
                 </a>
             </div>
 
-            <div class="hidden lg:flex items-center gap-3">
+            <div class="hidden lg:flex items-center gap-5">
                 <nav class="flex items-center gap-1">
                     {% if user.is_authenticated %}
-                    <a href="{% url 'dashboard' %}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">Dashboard</a>
-                    <a href="{% url 'equipment_list' %}" class="nav-link {% if active_page == 'equipment' %}active{% endif %}">Data Barang</a>
+                    <a href="{% url 'dashboard' %}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/>
+                            <rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/>
+                        </svg>
+                        Dashboard
+                    </a>
+                    <a href="{% url 'equipment_list' %}" class="nav-link {% if active_page == 'equipment' %}active{% endif %}">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>
+                        </svg>
+                        Data Barang
+                    </a>
                     {% endif %}
-                    <a href="{% url 'scan' %}" class="nav-link {% if active_page == 'scan' %}active{% endif %}">Scan</a>
+                    <a href="{% url 'scan' %}" class="nav-link {% if active_page == 'scan' %}active{% endif %}">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 8V5a1 1 0 011-1h3"/><path d="M16 4h3a1 1 0 011 1v3"/>
+                            <path d="M20 16v3a1 1 0 01-1 1h-3"/><path d="M8 20H5a1 1 0 01-1-1v-3"/>
+                            <line x1="4" y1="12" x2="20" y2="12" stroke-dasharray="1 3"/>
+                        </svg>
+                        Scan
+                    </a>
                     {% if user.is_authenticated %}
-                    <a href="{% url 'schedule_list' %}" class="nav-link {% if active_page == 'maintenance' %}active{% endif %}">Jadwal Maintenance</a>
-                    <a href="{% url 'log_list' %}" class="nav-link {% if active_page == 'history' %}active{% endif %}">Riwayat Maintenance</a>
-                    <a href="{% url 'report' %}" class="nav-link {% if active_page == 'report' %}active{% endif %}">Laporan</a>
+                    <a href="{% url 'schedule_list' %}" class="nav-link {% if active_page == 'maintenance' %}active{% endif %}">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/>
+                            <line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/>
+                        </svg>
+                        Jadwal Maintenance
+                    </a>
+                    <a href="{% url 'log_list' %}" class="nav-link {% if active_page == 'history' %}active{% endif %}">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+                        </svg>
+                        Riwayat Maintenance
+                    </a>
+                    <a href="{% url 'report' %}" class="nav-link {% if active_page == 'report' %}active{% endif %}">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M6 3h9l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M15 3v5h5"/>
+                            <line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>
+                        </svg>
+                        Laporan
+                    </a>
                     {% endif %}
                 </nav>
+
+                <div class="w-px h-6 bg-line"></div>
+
                 {% if user.is_authenticated %}
-                <form method="post" action="{% url 'logout' %}" class="ml-1">
-                    {% csrf_token %}
-                    <button type="submit" class="nav-link">Logout ({{ user.full_name|default:user.username }})</button>
-                </form>
+                <div class="flex items-center gap-2">
+                    <div class="user-chip">{{ user.full_name|default:user.username|slice:":1"|upper }}</div>
+                    <span class="text-[13px] font-medium text-ink hidden xl:inline">{{ user.full_name|default:user.username }}</span>
+                    <form method="post" action="{% url 'logout' %}">
+                        {% csrf_token %}
+                        <button type="submit" class="p-2 rounded-[8px] hover:bg-bg transition-colors text-muted hover:text-red" aria-label="Logout" title="Logout">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
                 {% else %}
-                <a href="{% url 'login' %}" class="ml-1 px-4 py-2 rounded-[10px] text-[13px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Login</a>
+                <a href="{% url 'login' %}" class="px-4 py-2 rounded-[10px] text-[13px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Login</a>
                 {% endif %}
             </div>
         </div>
+        <div class="tag-strip"></div>
     </header>
 
+    <!-- ============ MOBILE SIDEBAR ============ -->
     <div id="sidebarOverlay" onclick="closeSidebar()" class="fixed inset-0 bg-black/40 z-40 opacity-0 pointer-events-none transition-opacity duration-200 lg:hidden"></div>
 
     <aside id="mobileSidebar" class="fixed top-0 left-0 h-full w-[290px] bg-white z-50 shadow-xl -translate-x-full transition-transform duration-200 lg:hidden flex flex-col">
-        <div class="flex items-center justify-between px-5 py-5">
-            <a href="{% url 'dashboard' %}" class="flex items-center">
-                <div class="ihc-logo">
+        <div class="flex items-center justify-between px-5 py-5 border-b border-line">
+            <a href="{% url 'dashboard' %}" class="flex items-center gap-3">
+                <div class="ihc-logo" style="height:40px;">
                     <img src="{% static 'assets/img/ihc.png' %}" alt="Logo IHC">
                 </div>
+                <div class="flex flex-col leading-tight">
+                    <span class="font-display text-[14px] font-semibold text-ink">Manajemen Alat</span>
+                    <span class="font-mono text-[10px] tracking-wide text-muted uppercase">RS Pelabuhan · IHC</span>
+                </div>
             </a>
-
             <button onclick="closeSidebar()" class="p-2 rounded-[8px] hover:bg-bg transition-colors" aria-label="Tutup menu">
                 <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#5E6B7C" stroke-width="2" stroke-linecap="round">
                     <line x1="4" y1="4" x2="20" y2="20"/>
@@ -78,29 +131,84 @@
             </button>
         </div>
 
-        <div class="px-5 pb-3">
-            <span class="font-display text-[15px] font-semibold text-brand">Manajemen Alat</span>
-        </div>
+        <nav class="flex-1 overflow-y-auto px-4 py-2">
+            {% if user.is_authenticated %}
+            <p class="sidebar-eyebrow">Utama</p>
+            <a href="{% url 'dashboard' %}" class="sidebar-link {% if active_page == 'dashboard' %}active{% endif %}">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/>
+                    <rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/>
+                </svg>
+                Dashboard
+            </a>
+            <a href="{% url 'equipment_list' %}" class="sidebar-link {% if active_page == 'equipment' %}active{% endif %}">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>
+                </svg>
+                Data Barang
+            </a>
 
-        <nav class="flex flex-col gap-1 px-4 py-3">
-            {% if user.is_authenticated %}
-            <a href="{% url 'dashboard' %}" class="sidebar-link {% if active_page == 'dashboard' %}active{% endif %}">Dashboard</a>
-            {% endif %}
-            <a href="{% url 'scan' %}" class="sidebar-link {% if active_page == 'scan' %}active{% endif %}">Scan</a>
-            {% if user.is_authenticated %}
-            <a href="{% url 'equipment_list' %}" class="sidebar-link {% if active_page == 'equipment' %}active{% endif %}">Data Barang</a>
-            <a href="{% url 'schedule_list' %}" class="sidebar-link {% if active_page == 'maintenance' %}active{% endif %}">Maintenance</a>
-            <a href="{% url 'log_list' %}" class="sidebar-link {% if active_page == 'history' %}active{% endif %}">Riwayat</a>
-            <a href="{% url 'report' %}" class="sidebar-link {% if active_page == 'report' %}active{% endif %}">Laporan</a>
+            <p class="sidebar-eyebrow">Operasional</p>
+            <a href="{% url 'scan' %}" class="sidebar-link {% if active_page == 'scan' %}active{% endif %}">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 8V5a1 1 0 011-1h3"/><path d="M16 4h3a1 1 0 011 1v3"/>
+                    <path d="M20 16v3a1 1 0 01-1 1h-3"/><path d="M8 20H5a1 1 0 01-1-1v-3"/>
+                    <line x1="4" y1="12" x2="20" y2="12" stroke-dasharray="1 3"/>
+                </svg>
+                Scan
+            </a>
+            <a href="{% url 'schedule_list' %}" class="sidebar-link {% if active_page == 'maintenance' %}active{% endif %}">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="5" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/>
+                    <line x1="8" y1="3" x2="8" y2="7"/><line x1="16" y1="3" x2="16" y2="7"/>
+                </svg>
+                Jadwal Maintenance
+            </a>
+            <a href="{% url 'log_list' %}" class="sidebar-link {% if active_page == 'history' %}active{% endif %}">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+                </svg>
+                Riwayat Maintenance
+            </a>
+
+            <p class="sidebar-eyebrow">Laporan</p>
+            <a href="{% url 'report' %}" class="sidebar-link {% if active_page == 'report' %}active{% endif %}">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 3h9l5 5v13a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"/><path d="M15 3v5h5"/>
+                    <line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/>
+                </svg>
+                Laporan
+            </a>
+            {% else %}
+            <p class="sidebar-eyebrow">Menu</p>
+            <a href="{% url 'scan' %}" class="sidebar-link {% if active_page == 'scan' %}active{% endif %}">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 8V5a1 1 0 011-1h3"/><path d="M16 4h3a1 1 0 011 1v3"/>
+                    <path d="M20 16v3a1 1 0 01-1 1h-3"/><path d="M8 20H5a1 1 0 01-1-1v-3"/>
+                    <line x1="4" y1="12" x2="20" y2="12" stroke-dasharray="1 3"/>
+                </svg>
+                Scan
+            </a>
             {% endif %}
         </nav>
 
-        <div class="mt-auto px-4 py-4 border-t border-line">
+        <div class="px-4 py-4 border-t border-line">
             {% if user.is_authenticated %}
-            <p class="text-[12px] text-muted mb-2">Masuk sebagai <strong>{{ user.full_name|default:user.username }}</strong></p>
+            <div class="flex items-center gap-3 px-1 mb-3">
+                <div class="user-chip">{{ user.full_name|default:user.username|slice:":1"|upper }}</div>
+                <div class="flex flex-col leading-tight overflow-hidden">
+                    <span class="text-[13px] font-semibold text-ink truncate">{{ user.full_name|default:user.username }}</span>
+                    <span class="text-[11px] text-muted">{{ user.unit_kerja }}</span>
+                </div>
+            </div>
             <form method="post" action="{% url 'logout' %}">
                 {% csrf_token %}
-                <button type="submit" class="w-full px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Logout</button>
+                <button type="submit" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border border-line bg-white hover:border-red hover:text-red transition-colors">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+                    </svg>
+                    Logout
+                </button>
             </form>
             {% else %}
             <a href="{% url 'login' %}" class="block text-center w-full px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Login</a>
@@ -108,7 +216,8 @@
         </div>
     </aside>
 
-    <main class="px-4 py-5 sm:px-6 sm:py-6 lg:py-7">
+    <!-- ============ MAIN ============ -->
+    <main class="flex-1 px-4 py-5 sm:px-6 sm:py-6 lg:py-7 w-full">
         <div class="max-w-[1280px] mx-auto">
             {% if messages %}
                 <div class="mb-5 space-y-2">
@@ -130,6 +239,22 @@
             {% block content %}{% endblock %}
         </div>
     </main>
+
+    <!-- ============ FOOTER ============ -->
+    <footer class="border-t border-line bg-white">
+        <div class="tag-strip"></div>
+        <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="ihc-logo" style="height:26px; opacity:.65;">
+                    <img src="{% static 'assets/img/ihc.png' %}" alt="Logo IHC">
+                </div>
+                <span class="text-[12.5px] text-muted">RS Pelabuhan Palembang &middot; IHC Group</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="font-mono text-[11px] tracking-wide text-muted">© 2026 RS IHC Pelabuhan Palembang, All rights reserved.</span>
+            </div>
+        </div>
+    </footer>
 
     <script src="{% static 'assets/js/scripts.js' %}"></script>
 </body>
