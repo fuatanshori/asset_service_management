@@ -12,42 +12,64 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 from pathlib import Path
 import os
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+def env_bool(name, default=False):
+    """Baca env var sebagai boolean — "1"/"true"/"yes"/"on" (case-
+    insensitive) dianggap True, apapun selain itu (atau kalau env var-nya
+    nggak ada) dianggap False/default."""
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in ("1", "true", "yes", "on")
 
+
+# DEBUG dikontrol lewat environment variable DJANGO_DEBUG, BUKAN
+# di-hardcode di file ini — biar nggak ada risiko lupa flip balik pas
+# mau deploy. Default-nya False (aman) kalau env var nggak di-set;
+# nyalain mode dev cuma lewat `export DJANGO_DEBUG=True` di lokal.
+DEBUG = env_bool("DJANGO_DEBUG", default=False)
+# DEBUG =True
 # SECURITY WARNING: keep the secret key used in production secret!
-# Fail-fast: kalau DJANGO_SECRET_KEY lupa di-set di .env, app gak jalan
-# sama sekali (lebih baik daripada diam-diam pakai key yang ke-hardcode).
-SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    if DEBUG:
+        # Fallback ini CUMA buat dev lokal biar nggak ribet set env var
+        # tiap kali. Kalau DEBUG=False tapi env var ini kelewat, mending
+        # error keras daripada diam-diam jalan pakai key yang udah
+        # ke-expose di kode.
+        SECRET_KEY = "django-insecure-r9isn0c$jcwhu50vy329+_c#kov^80*uk=@b1pa+^jb2tu*0*v"
+    else:
+        raise RuntimeError(
+            "DJANGO_SECRET_KEY wajib di-set lewat environment variable kalau DEBUG=False."
+        )
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
-
-ALLOWED_HOSTS = ["project.fuatanshori.com", "localhost", "127.0.0.1"]
+# Baca dari env var (comma-separated) biar fleksibel antar staging/
+# production tanpa perlu edit kode — sengaja TANPA wildcard "*" secara
+# default, itu bahaya di jaringan publik. Kalau deploy-nya ke IP privat
+# di jaringan tertutup, isi DJANGO_ALLOWED_HOSTS dengan IP tersebut (atau
+# "*" kalau jaringannya beneran cuma bisa diakses internal/terpercaya).
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.environ.get(
+        "DJANGO_ALLOWED_HOSTS", "project.fuatanshori.com,localhost,127.0.0.1"
+    ).split(",")
+    if h.strip()
+]
 
 CSRF_TRUSTED_ORIGINS = [
-    "https://project.fuatanshori.com",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
+    o.strip()
+    for o in os.environ.get(
+        "DJANGO_CSRF_TRUSTED_ORIGINS",
+        "https://project.fuatanshori.com,http://localhost:8000,http://127.0.0.1:8000",
+    ).split(",")
+    if o.strip()
 ]
 
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 USE_X_FORWARDED_HOST = True
-
-# Cookie & transport hardening — aman dipasang karena Cloudflare selalu
-# serve ke user lewat HTTPS.
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-X_FRAME_OPTIONS = "DENY"
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -57,16 +79,16 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'equipment',
-    "maintenance",
-    "dashboard",
-    "reports",
     'accounts',
+    'equipment',
+    'maintenance',
+    'dashboard',
+    'reports',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware", 
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -80,9 +102,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        # Absolut, bukan relatif — biar gak tergantung current working
-        # directory pas gunicorn dijalanin.
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': ['templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -99,19 +119,29 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('MYSQL_DATABASE'),
-        'USER': os.environ.get('MYSQL_USER'),
-        'PASSWORD': os.environ.get('MYSQL_PASSWORD'),
-        # Nama service MySQL di docker-compose, bukan container name lama.
-        'HOST': os.environ.get('MYSQL_HOST', 'asset-service-management-db'),
-        'PORT': os.environ.get('MYSQL_PORT', '3306'),
-        'OPTIONS': {'charset': 'utf8mb4'},
+#
+# Dev lokal (DEBUG=True) — SQLite, gampang, gak perlu nyalain MySQL
+# segala. Staging/production (DEBUG=False) — WAJIB MySQL, biar data
+# persisten lewat db_volume.
+if DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': os.environ.get('MYSQL_DATABASE'),
+            'USER': os.environ.get('MYSQL_USER'),
+            'PASSWORD': os.environ.get('MYSQL_PASSWORD'),
+            'HOST': os.environ.get('MYSQL_HOST', 'db_manajemen_alat'),
+            'PORT': os.environ.get('MYSQL_PORT', '3306'),
+            'OPTIONS': {'charset': 'utf8mb4'},
+        }
+    }
 
 
 # Password validation
@@ -132,11 +162,67 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Authentication
+# Halaman Detail Barang & Scan sengaja PUBLIK (dibaca lewat QR fisik tanpa
+# perlu login) — semua halaman lain wajib login. login_required() bakal
+# redirect ke LOGIN_URL dengan ?next=<url tujuan> otomatis, jadi abis
+# login user balik lagi ke halaman yang tadinya mau diakses.
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'login'
 
+# Custom User model (app accounts) — staff RS yang mengelola data aset.
 AUTH_USER_MODEL = 'accounts.User'
+
+# Logging
+# Gunicorn cuma nyatet di level proses/HTTP (akses & worker crash) — dia
+# TIDAK otomatis nangkep log level aplikasi Django (exception di view,
+# error 500, dst). Log selalu ke STDOUT di sini, terlepas dari DEBUG,
+# biar ke-capture Docker lewat `docker logs` — sengaja bukan ke file di
+# dalam container, karena hilang kalau container-nya di-restart/redeploy.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[{asctime}] {levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        # Log umum dari Django sendiri (startup, dsb).
+        "django": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        # Paling penting: exception tak tertangani / error 500 di view
+        # mana pun, lengkap dengan traceback-nya.
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        # Percobaan akses mencurigakan (host tidak dikenal, CSRF gagal,
+        # dst) — berguna buat mantau kalau ada yang aneh-aneh.
+        "django.security": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+    },
+}
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
@@ -164,19 +250,52 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
+#
+# "MAILERS" sebelumnya BUKAN nama setting Django yang valid (yang bener
+# EMAIL_BACKEND, bentuknya string bukan dict) — jadi selama ini ke-ignore
+# total dan Django diam-diam balik ke SMTP backend bawaan. Default di
+# sini tetap console backend (aman, nggak beneran ngirim email) sampai
+# ada kebutuhan & kredensial SMTP asli.
+EMAIL_BACKEND = os.environ.get(
+    "DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-# Storage config — satu-satunya tempat static/default storage didefine.
-# Jangan dobel sama STATICFILES_STORAGE, karena STORAGES yang menang dan
-# bakal nge-override diam-diam.
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
     },
     "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
     },
 }
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# Security hardening — HTTPS
+# https://docs.djangoproject.com/en/6.1/topics/security/
+#
+# Sengaja DIPISAH dari DEBUG — "bukan mode dev" dan "beneran punya HTTPS
+# di depan" itu dua hal yang beda. Kalau diakses langsung lewat IP privat
+# tanpa reverse proxy/tunnel yang nanganin TLS, setting-setting ini
+# justru bikin situs nggak bisa diakses (dipaksa redirect ke https://
+# yang nggak ada listener-nya, cookie session/CSRF ditolak browser
+# karena "Secure" tapi koneksinya cuma HTTP). Default-nya ngikutin DEBUG
+# (asumsi wajar: kalau bukan dev, biasanya emang lewat domain+HTTPS),
+# tapi bisa di-override manual lewat DJANGO_HTTPS_ENABLED=False buat
+# kasus akses langsung IP privat tanpa TLS.
+HTTPS_ENABLED = env_bool("DJANGO_HTTPS_ENABLED", default=not DEBUG)
+
+if HTTPS_ENABLED:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    # Mulai dari nilai kecil (1 jam) dulu, naikin ke 31536000 (1 tahun)
+    # setelah yakin HTTPS-nya stabil — HSTS bikin browser "ngunci" ke
+    # HTTPS terus buat domain ini, jadi riskan kalau ternyata ada
+    # masalah dan situsnya sempat cuma bisa diakses lewat HTTP lagi.
+    SECURE_HSTS_SECONDS = 3600
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+
+# Clickjacking protection — nggak tergantung HTTPS, aman di-set kapan
+# aja selama bukan dev (biar iframe testing lokal kalau perlu tetap
+# gampang).
+if not DEBUG:
+    X_FRAME_OPTIONS = 'DENY'

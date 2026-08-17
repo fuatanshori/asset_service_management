@@ -151,8 +151,26 @@ def equipment_search(request):
     q = request.GET.get("q", "").strip()
     qs = Equipment.objects.exclude(status__in=[Equipment.STATUS_UNDER_REPAIR, Equipment.STATUS_SCHEDULED])
     if q:
-        qs = qs.filter(Q(name__icontains=q) | Q(brand__icontains=q) | Q(model_type__icontains=q))
-    results = [{"id": item.pk, "label": str(item)} for item in qs[:10]]
+        qs = qs.filter(
+            Q(name__icontains=q) | Q(brand__icontains=q) | Q(model_type__icontains=q)
+            | Q(serial_number__icontains=q)
+        )
+    # "label" dipertahankan buat ngisi kotak input pas dipilih (format
+    # ringkas, dipakai juga di selected_equipment_label view lain).
+    # Field lainnya buat nampilin detail lebih informatif di dropdown
+    # hasil pencarian — biar gampang bedain barang yang namanya mirip.
+    results = [
+        {
+            "id": item.pk,
+            "label": str(item),
+            "name": item.name,
+            "serial_number": item.serial_number,
+            "brand": item.brand,
+            "model_type": item.model_type,
+            "location_name": item.location_name,
+        }
+        for item in qs[:10]
+    ]
     return JsonResponse({"results": results})
 
 
@@ -175,6 +193,7 @@ def equipment_export(request):
     wb.save(response)
     return response
 
+
 @login_required
 def equipment_map(request):
     items = Equipment.objects.filter(latitude__isnull=False, longitude__isnull=False)
@@ -182,10 +201,6 @@ def equipment_map(request):
         {
             "id": item.pk,
             "name": item.name,
-            "serial_number": item.serial_number,
-            "brand": item.brand,
-            "model_type": item.model_type,
-            "location_name": item.location_name,
             "lat": float(item.latitude),
             "lng": float(item.longitude),
             "status": item.get_status_display(),
