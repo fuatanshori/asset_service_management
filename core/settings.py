@@ -31,7 +31,7 @@ def env_bool(name, default=False):
 # mau deploy. Default-nya False (aman) kalau env var nggak di-set;
 # nyalain mode dev cuma lewat `export DJANGO_DEBUG=True` di lokal.
 DEBUG = env_bool("DJANGO_DEBUG", default=False)
-DEBUG =True
+# DEBUG =True
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
