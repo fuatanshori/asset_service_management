@@ -1,6 +1,8 @@
 # equipment/models.py
 
 from django.db import models
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 from django.urls import reverse
 
 
@@ -57,3 +59,26 @@ class Equipment(models.Model):
     @property
     def has_location(self):
         return self.latitude is not None and self.longitude is not None
+
+    def save(self, *args, **kwargs):
+        """Kalau foto diganti dengan file baru, atau dihapus lewat
+        checkbox "Clear" di form — file fisik yang LAMA dihapus dari
+        disk juga, biar nggak numpuk jadi sampah yang nggak kepakai.
+        Cuma jalan kalau foto beneran berubah; kalau form disave tanpa
+        nyentuh field foto, file lama dibiarkan apa adanya."""
+        if self.pk:
+            old = type(self).objects.filter(pk=self.pk).values("photo").first()
+            if old and old["photo"] and old["photo"] != self.photo.name:
+                self.photo.storage.delete(old["photo"])
+        super().save(*args, **kwargs)
+
+
+@receiver(pre_delete, sender=Equipment)
+def delete_equipment_photo_file(sender, instance, **kwargs):
+    """Hapus file foto fisik dari disk pas record Equipment-nya
+    dihapus. Pakai signal pre_delete (bukan override delete()) karena
+    Django tidak memanggil delete() per-instance untuk objek yang
+    kehapus lewat cascade delete — cuma signal pre_delete/post_delete
+    yang reliably jalan di semua kasus."""
+    if instance.photo:
+        instance.photo.storage.delete(instance.photo.name)

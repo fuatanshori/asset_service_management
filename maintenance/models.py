@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models.signals import pre_delete
+from django.dispatch import receiver
 from django.utils import timezone
 
 from equipment.models import Equipment
@@ -213,7 +215,12 @@ class MaintenanceLog(models.Model):
 
         old = None
         if self.pk:
-            old = type(self).objects.filter(pk=self.pk).values("result").first()
+            old = (
+                type(self)
+                .objects.filter(pk=self.pk)
+                .values("result", "photo_before", "photo_after", "photo_receipt")
+                .first()
+            )
         old_was_completion = bool(old) and old["result"] in completion_results
         new_is_completion = self.result in completion_results
 
@@ -222,6 +229,17 @@ class MaintenanceLog(models.Model):
                 self.completed_date = timezone.localdate()
         elif not new_is_completion and old_was_completion:
             self.completed_date = None
+
+        # Foto lama (sebelum/sesudah/kwitansi) yang diganti dengan file
+        # baru, atau dihapus lewat checkbox "Clear" di form — file
+        # fisiknya dihapus dari disk juga, biar nggak numpuk jadi sampah
+        # yang nggak kepakai. Cuma jalan kalau foto beneran berubah.
+        if old:
+            for field_name in ("photo_before", "photo_after", "photo_receipt"):
+                old_value = old[field_name]
+                new_field = getattr(self, field_name)
+                if old_value and old_value != new_field.name:
+                    new_field.storage.delete(old_value)
 
         super().save(*args, **kwargs)
 
@@ -237,3 +255,18 @@ class MaintenanceLog(models.Model):
                 # dengan log (baru saja disamakan di atas), jadi tidak
                 # perlu schedule.save() memicu log.save() lagi.
                 schedule.save(skip_log_sync=True)
+
+
+@receiver(pre_delete, sender=MaintenanceLog)
+def delete_maintenance_log_photo_files(sender, instance, **kwargs):
+    """Hapus semua file foto (sebelum/sesudah/kwitansi) dari disk pas
+    record MaintenanceLog-nya dihapus — termasuk kalau kehapus lewat
+    cascade delete (misal MaintenanceSchedule atau Equipment induknya
+    yang dihapus, bukan log-nya langsung). Pakai signal pre_delete
+    (bukan override delete()) karena Django tidak memanggil delete()
+    per-instance untuk objek yang kehapus lewat cascade — cuma signal
+    pre_delete/post_delete yang reliably jalan di semua kasus."""
+    for field_name in ("photo_before", "photo_after", "photo_receipt"):
+        file_field = getattr(instance, field_name)
+        if file_field:
+            file_field.storage.delete(file_field.name)
