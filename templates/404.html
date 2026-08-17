@@ -1,0 +1,20 @@
+{# templates/404.html #}
+{% extends "base.html" %}
+{% block title %}Halaman Tidak Ditemukan{% endblock %}
+{% block content %}
+
+  <div class="bg-white border border-line rounded-xl2 p-6 sm:p-8 max-w-[440px] mx-auto text-center mt-4 sm:mt-10">
+    <div class="w-14 h-14 mx-auto mb-4 rounded-full bg-[#E2E9F1] text-brand flex items-center justify-center text-2xl">🔍</div>
+    <p class="font-mono text-[11px] tracking-[0.08em] uppercase text-muted mb-2">Kode 404</p>
+    <h1 class="font-display text-[19px] font-semibold mb-2">Halaman Tidak Ditemukan</h1>
+    <p class="text-[13.5px] text-muted mb-6 leading-relaxed">
+      Halaman yang kamu cari tidak ada, sudah dipindahkan, atau URL-nya salah ketik.
+    </p>
+    {% if user.is_authenticated %}
+    <a href="{% url 'dashboard' %}" class="inline-block px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Kembali ke Dashboard</a>
+    {% else %}
+    <a href="{% url 'scan' %}" class="inline-block px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Kembali ke Scan</a>
+    {% endif %}
+  </div>
+
+{% endblock %}
