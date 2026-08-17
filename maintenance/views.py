@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -90,7 +91,18 @@ def schedule_list(request):
         if data["date_to"]:
             qs = qs.filter(scheduled_date__lte=data["date_to"])
 
-    context = {"active_page": "maintenance", "form": form, "schedule_list": qs}
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    querydict = request.GET.copy()
+    querydict.pop("page", None)
+
+    context = {
+        "active_page": "maintenance",
+        "form": form,
+        "page_obj": page_obj,
+        "schedule_list": page_obj.object_list,
+        "filter_querystring": querydict.urlencode(),
+    }
     return render(request, "maintenance/schedule_list.html", context)
 
 
@@ -256,7 +268,18 @@ def log_list(request):
         if data["year"]:
             qs = qs.filter(date__year=data["year"])
 
-    context = {"active_page": "history", "form": form, "log_list": qs}
+    paginator = Paginator(qs, 20)
+    page_obj = paginator.get_page(request.GET.get("page"))
+    querydict = request.GET.copy()
+    querydict.pop("page", None)
+
+    context = {
+        "active_page": "history",
+        "form": form,
+        "page_obj": page_obj,
+        "log_list": page_obj.object_list,
+        "filter_querystring": querydict.urlencode(),
+    }
     return render(request, "maintenance/log_list.html", context)
 
 
@@ -284,8 +307,17 @@ def log_edit(request, pk):
         },
     )
 
+
 def log_detail(request, pk):
-    log = get_object_or_404(MaintenanceLog, pk=pk)
+    """Detail lengkap satu riwayat maintenance — termasuk biaya dan foto
+    dokumentasi (before/after/kwitansi). Sengaja PUBLIK (tidak
+    login_required) — desain yang sama dengan equipment_detail &
+    equipment_qrcode, biar siapapun yang scan QR bisa lihat riwayat
+    lengkap tanpa perlu login. Tombol Edit tetap dikunci login lewat
+    {% if user.is_authenticated %} di template."""
+    log = get_object_or_404(
+        MaintenanceLog.objects.select_related("schedule__equipment"), pk=pk
+    )
     schedule = log.schedule
     equipment = schedule.equipment
 
@@ -293,5 +325,6 @@ def log_detail(request, pk):
         "log": log,
         "schedule": schedule,
         "equipment": equipment,
+        "next_url": request.GET.get("next", ""),
         "active_page": "equipment" if request.GET.get("from") == "equipment" else "history",
     })

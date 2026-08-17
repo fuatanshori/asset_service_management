@@ -2,7 +2,7 @@
 {% block title %}Detail Riwayat — {{ equipment.name }}{% endblock %}
 
 {% block extra_head %}
-  {% if equipment.has_location %}
+  {% if log.has_location %}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>.leaflet-container{z-index:0}</style>
@@ -16,11 +16,9 @@
     <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">Detail Riwayat</h1>
   </div>
   <div class="flex gap-2.5 flex-wrap">
-    {% if request.GET.from != "equipment" %}
-    <a href="{% url 'log_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">← Kembali</a>
-    {% endif %}
+    <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'log_list' %}{% endif %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">← Kembali</a>
     {% if user.is_authenticated %}
-    <a href="{% url 'log_edit' log.pk %}?next={{ request.get_full_path|urlencode }}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-amber hover:opacity-90 transition-colors">Edit Riwayat</a>
+    <a href="{% url 'log_edit' log.pk %}?next={% if next_url %}{{ next_url|urlencode }}{% else %}{{ request.get_full_path|urlencode }}{% endif %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-amber hover:opacity-90 transition-colors">Edit Riwayat</a>
     {% endif %}
   </div>
 </div>
@@ -63,6 +61,18 @@
   <div class="mt-4 pt-4 border-t border-line">
     <span class="field-label">Keterangan Barang</span>
     <p class="text-[13.5px] mt-1 whitespace-pre-line">{{ equipment.notes }}</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
+  <h2 class="font-display text-[16px] font-semibold mb-3">📍 Titik Lokasi Riwayat Ini</h2>
+  {% if log.has_location %}
+  <div id="logDetailMap" class="w-full h-56 rounded-[10px] border border-line"></div>
+  <p class="text-[11.5px] text-muted mt-2">Lokasi ini direkam saat riwayat ini diisi — bukan lokasi tetap barang.</p>
+  {% else %}
+  <div class="border-[1.5px] border-dashed border-line rounded-[10px] p-6 text-center text-muted text-[13px]">
+    Lokasi belum direkam untuk riwayat ini.
   </div>
   {% endif %}
 </div>
@@ -168,10 +178,10 @@
   <a href="{% url 'equipment_detail' equipment.pk %}" class="text-[12.5px] font-semibold text-brand hover:underline">← Lihat detail barang</a>
   <div class="flex gap-2.5">
     {% if request.GET.from != "equipment" %}
-    <a href="{% url 'log_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border border-line bg-white hover:border-brand hover:text-brand">Kembali ke Riwayat</a>
+    <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'log_list' %}{% endif %}" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border border-line bg-white hover:border-brand hover:text-brand">Kembali ke Riwayat</a>
     {% endif %}
     {% if user.is_authenticated %}
-    <a href="{% url 'log_edit' log.pk %}?next={{ request.get_full_path|urlencode }}" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-amber hover:opacity-90">Edit Riwayat</a>
+    <a href="{% url 'log_edit' log.pk %}?next={% if next_url %}{{ next_url|urlencode }}{% else %}{{ request.get_full_path|urlencode }}{% endif %}" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-amber hover:opacity-90">Edit Riwayat</a>
     {% endif %}
   </div>
 </div>
@@ -202,6 +212,18 @@
   <button type="button" onclick="closePhotoLightbox('receiptLightbox')" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xl">✕</button>
   <img src="{{ log.photo_receipt.url }}" alt="Foto kwitansi maintenance" onclick="event.stopPropagation()" class="max-w-full max-h-full object-contain rounded-[10px] cursor-default">
 </div>
+{% endif %}
+
+{% if log.has_location %}
+<script>
+  const logDetailMap = L.map('logDetailMap', { zoomControl: true, dragging: true, scrollWheelZoom: false })
+    .setView([{{ log.latitude }}, {{ log.longitude }}], 17);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19,
+  }).addTo(logDetailMap);
+  L.marker([{{ log.latitude }}, {{ log.longitude }}]).addTo(logDetailMap);
+</script>
 {% endif %}
 
 <script>

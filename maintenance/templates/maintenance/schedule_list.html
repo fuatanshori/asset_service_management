@@ -50,15 +50,13 @@
       <table class="w-full min-w-[1060px] border-collapse">
         <thead>
           <tr class="bg-bg/60">
-            <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tanggal</th>
+            <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tanggal Schedule</th>
             <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Barang</th>
             <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Merk</th>
             <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tipe</th>
             <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">No. Seri</th>
             <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Jenis</th>
-            <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Teknisi</th>
             <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Status</th>
-            <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tanggal Selesai</th>
             <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Aksi</th>
           </tr>
         </thead>
@@ -73,9 +71,7 @@
             <td class="px-4 py-3 text-[13px] font-mono">{{ s.equipment.model_type }}</td>
             <td class="px-4 py-3 text-[13px] font-mono">{{ s.equipment.serial_number }}</td>
             <td class="px-4 py-3 text-[13px]">{{ s.get_maintenance_type_display }}</td>
-            <td class="px-4 py-3 text-[13px]">{{ s.log.technician|default:"—" }}</td>
             <td class="px-4 py-3"><span class="badge badge-{{ s.log.result_color }}">{{ s.log.get_result_display }}</span></td>
-            <td class="px-4 py-3 text-[13px] font-mono">{{ s.log.completed_date|date:"d-m-Y"|default:"—" }}</td>
             <td class="px-4 py-3">
               <div class="flex gap-2 flex-wrap">
                 <a href="{% url 'log_edit' s.log.pk %}?next={{ request.get_full_path|urlencode }}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-green hover:opacity-90">Edit Riwayat</a>
@@ -97,5 +93,38 @@
       </table>
     </div>
   </div>
+
+  {% if page_obj.paginator.num_pages > 1 %}
+  <div class="flex flex-wrap items-center justify-between gap-3 mt-4">
+    <p class="text-[12.5px] text-muted">
+      Menampilkan {{ page_obj.start_index }}–{{ page_obj.end_index }} dari {{ page_obj.paginator.count }} jadwal
+    </p>
+    <div class="flex items-center gap-1.5">
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
+         class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">‹ Sebelumnya</a>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+        {% if num == page_obj.number %}
+          <span class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold text-white bg-brand">{{ num }}</span>
+        {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+          <a href="?page={{ num }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
+             class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">{{ num }}</a>
+        {% elif num == 1 or num == page_obj.paginator.num_pages %}
+          <a href="?page={{ num }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
+             class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">{{ num }}</a>
+        {% elif num == page_obj.number|add:"-3" or num == page_obj.number|add:"3" %}
+          <span class="px-1.5 text-[12.5px] text-muted">···</span>
+        {% endif %}
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
+         class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Selanjutnya ›</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
 
 {% endblock %}
