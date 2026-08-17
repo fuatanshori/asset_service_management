@@ -60,7 +60,20 @@
         iconAnchor: [10, 10],
       });
       const marker = L.marker([m.lat, m.lng], { icon: icon });
-      marker.bindPopup(`<strong>${m.name}</strong><br>${m.status}<br><a href="${m.url}">Lihat detail →</a>`);
+
+      const typeLine = m.model_type ? `${m.brand} · ${m.model_type}` : m.brand;
+      const locLine = m.location_name ? `<br><span style="font-size:12px;color:#5E6B7C">📍 ${m.location_name}</span>` : '';
+
+      marker.bindPopup(`
+        <div style="min-width:190px">
+          <strong>${m.name}</strong><br>
+          <span style="color:#5E6B7C;font-size:12px">${typeLine}</span><br>
+          <span style="font-size:12.5px">S/N: <strong>${m.serial_number}</strong></span>
+          ${locLine}<br>
+          <span style="color:${color};font-weight:600;font-size:12.5px">${m.status}</span><br>
+          <a href="${m.url}" style="font-size:12.5px">Lihat detail →</a>
+        </div>
+      `);
       clusterGroup.addLayer(marker);
       bounds.push([m.lat, m.lng]);
     });

@@ -175,7 +175,6 @@ def equipment_export(request):
     wb.save(response)
     return response
 
-
 @login_required
 def equipment_map(request):
     items = Equipment.objects.filter(latitude__isnull=False, longitude__isnull=False)
@@ -183,6 +182,10 @@ def equipment_map(request):
         {
             "id": item.pk,
             "name": item.name,
+            "serial_number": item.serial_number,
+            "brand": item.brand,
+            "model_type": item.model_type,
+            "location_name": item.location_name,
             "lat": float(item.latitude),
             "lng": float(item.longitude),
             "status": item.get_status_display(),
