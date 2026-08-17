@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+{% block title %}Detail Riwayat — {{ equipment.name }}{% endblock %}
+
+{% block extra_head %}
+  {% if equipment.has_location %}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>.leaflet-container{z-index:0}</style>
+  {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+  <div>
+    <div class="text-[12px] text-muted mb-1">Riwayat Maintenance</div>
+    <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">Detail Riwayat</h1>
+  </div>
+  <div class="flex gap-2.5 flex-wrap">
+    {% if request.GET.from != "equipment" %}
+    <a href="{% url 'log_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">← Kembali</a>
+    {% endif %}
+    {% if user.is_authenticated %}
+    <a href="{% url 'log_edit' log.pk %}?next={{ request.get_full_path|urlencode }}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-amber hover:opacity-90 transition-colors">Edit Riwayat</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="relative bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5 overflow-hidden">
+  <div class="absolute left-0 top-0 bottom-0 w-1 bg-brand"></div>
+  <div class="flex flex-col sm:flex-row gap-5">
+    {% if equipment.photo %}
+    <button type="button" onclick="openPhotoLightbox('equipmentPhotoLightbox')" class="w-full sm:w-40 h-40 flex-shrink-0 rounded-[10px] border border-line overflow-hidden relative group cursor-zoom-in p-0">
+      <img src="{{ equipment.photo.url }}" alt="{{ equipment.name }}" class="w-full h-full object-cover">
+      <span class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+        <span class="opacity-0 group-hover:opacity-100 transition-opacity text-white text-[11px] font-semibold bg-black/50 px-2.5 py-1 rounded-full">Perbesar</span>
+      </span>
+    </button>
+    {% else %}
+    <div class="w-full sm:w-40 h-40 flex-shrink-0 rounded-[10px] border-[1.5px] border-dashed border-line flex items-center justify-center text-muted text-[12px]">Tidak ada foto</div>
+    {% endif %}
+
+    <div class="flex-1">
+      <div class="flex flex-wrap justify-between items-start gap-3 mb-4">
+        <div>
+          <span class="field-label">Barang</span>
+          <h2 class="font-display text-[18px] font-semibold">{{ equipment.name }}</h2>
+        </div>
+        <span class="badge badge-{{ equipment.status_color }}">{{ equipment.get_status_display }}</span>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-y-4 gap-x-6">
+        <div><span class="field-label">Nomor Seri</span><span class="field-value">{{ equipment.serial_number|default:"—" }}</span></div>
+        <div><span class="field-label">Merk</span><span class="field-value">{{ equipment.brand|default:"—" }}</span></div>
+        <div><span class="field-label">Tipe</span><span class="field-value">{{ equipment.model_type|default:"—" }}</span></div>
+        <div><span class="field-label">Tahun Perolehan</span><span class="field-value">{{ equipment.acquisition_year|default:"—" }}</span></div>
+        <div><span class="field-label">Lokasi</span><span class="field-value">{{ equipment.location_name|default:"—" }}</span></div>
+        <div><span class="field-label">ID Barang</span><span class="field-value font-mono">#{{ equipment.pk }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  {% if equipment.notes %}
+  <div class="mt-4 pt-4 border-t border-line">
+    <span class="field-label">Keterangan Barang</span>
+    <p class="text-[13.5px] mt-1 whitespace-pre-line">{{ equipment.notes }}</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
+  <div class="flex flex-wrap justify-between items-center gap-3 mb-5">
+    <div>
+      <span class="field-label">Maintenance</span>
+      <h2 class="font-display text-[17px] font-semibold">Informasi Jadwal</h2>
+    </div>
+    <span class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold bg-bg text-muted">Jadwal #{{ schedule.pk }}</span>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-5 gap-x-6">
+    <div><span class="field-label">Tanggal Jadwal</span><span class="field-value font-mono">{{ schedule.scheduled_date|date:"d-m-Y" }}</span></div>
+    <div><span class="field-label">Jenis Perawatan</span><span class="field-value">{{ schedule.get_maintenance_type_display }}</span></div>
+  </div>
+
+  {% if schedule.notes %}
+  <div class="mt-5 pt-4 border-t border-line">
+    <span class="field-label">Catatan Jadwal</span>
+    <p class="text-[13.5px] mt-1 whitespace-pre-line">{{ schedule.notes }}</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
+  <div class="flex flex-wrap justify-between items-center gap-3 mb-5">
+    <div>
+      <span class="field-label">Riwayat Pengerjaan</span>
+      <h2 class="font-display text-[17px] font-semibold">Detail Pekerjaan</h2>
+    </div>
+    <span class="badge badge-{{ log.result_color }}">{{ log.get_result_display }}</span>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-5 gap-x-6">
+    <div><span class="field-label">Tanggal</span><span class="field-value font-mono">{{ log.date|date:"d-m-Y" }}</span></div>
+    <div><span class="field-label">Teknisi</span><span class="field-value">{{ log.technician|default:"—" }}</span></div>
+    <div><span class="field-label">Status / Hasil</span><span class="badge badge-{{ log.result_color }}">{{ log.get_result_display }}</span></div>
+    <div><span class="field-label">Tanggal Selesai</span><span class="field-value font-mono">{% if log.completed_date %}{{ log.completed_date|date:"d-m-Y" }}{% else %}—{% endif %}</span></div>
+    <div><span class="field-label">Biaya</span><span class="field-value font-mono">Rp{{ log.cost|floatformat:0 }}</span></div>
+    <div><span class="field-label">Terakhir Diperbarui</span><span class="field-value font-mono">{{ log.updated_at|date:"d-m-Y H:i" }}</span></div>
+  </div>
+
+  {% if log.action_taken %}
+  <div class="mt-5 pt-4 border-t border-line">
+    <span class="field-label">Tindakan yang Dilakukan</span>
+    <p class="text-[13.5px] mt-1 whitespace-pre-line leading-relaxed">{{ log.action_taken }}</p>
+  </div>
+  {% endif %}
+</div>
+
+<div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
+  <div class="mb-5">
+    <span class="field-label">Dokumentasi</span>
+    <h2 class="font-display text-[17px] font-semibold">Foto Maintenance</h2>
+  </div>
+
+  {% if log.photo_before or log.photo_after or log.photo_receipt %}
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+    {% if log.photo_before %}
+    <button type="button" onclick="openPhotoLightbox('beforeLightbox')" class="text-left group">
+      <div class="aspect-[4/3] rounded-[10px] border border-line overflow-hidden bg-bg">
+        <img src="{{ log.photo_before.url }}" alt="Foto sebelum maintenance" class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-200">
+      </div>
+      <div class="mt-2">
+        <span class="field-label">Foto Sebelum</span>
+        <span class="text-[12px] text-muted">Klik untuk memperbesar</span>
+      </div>
+    </button>
+    {% endif %}
+
+    {% if log.photo_after %}
+    <button type="button" onclick="openPhotoLightbox('afterLightbox')" class="text-left group">
+      <div class="aspect-[4/3] rounded-[10px] border border-line overflow-hidden bg-bg">
+        <img src="{{ log.photo_after.url }}" alt="Foto sesudah maintenance" class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-200">
+      </div>
+      <div class="mt-2">
+        <span class="field-label">Foto Sesudah</span>
+        <span class="text-[12px] text-muted">Klik untuk memperbesar</span>
+      </div>
+    </button>
+    {% endif %}
+
+    {% if log.photo_receipt %}
+    <button type="button" onclick="openPhotoLightbox('receiptLightbox')" class="text-left group">
+      <div class="aspect-[4/3] rounded-[10px] border border-line overflow-hidden bg-bg">
+        <img src="{{ log.photo_receipt.url }}" alt="Foto kwitansi maintenance" class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-200">
+      </div>
+      <div class="mt-2">
+        <span class="field-label">Foto Kwitansi</span>
+        <span class="text-[12px] text-muted">Klik untuk memperbesar</span>
+      </div>
+    </button>
+    {% endif %}
+  </div>
+  {% else %}
+  <div class="border-[1.5px] border-dashed border-line rounded-[10px] p-8 text-center text-muted text-[13px]">Tidak ada dokumentasi foto untuk riwayat ini.</div>
+  {% endif %}
+</div>
+
+<div class="flex flex-wrap justify-between items-center gap-3 pb-6">
+  <a href="{% url 'equipment_detail' equipment.pk %}" class="text-[12.5px] font-semibold text-brand hover:underline">← Lihat detail barang</a>
+  <div class="flex gap-2.5">
+    {% if request.GET.from != "equipment" %}
+    <a href="{% url 'log_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border border-line bg-white hover:border-brand hover:text-brand">Kembali ke Riwayat</a>
+    {% endif %}
+    {% if user.is_authenticated %}
+    <a href="{% url 'log_edit' log.pk %}?next={{ request.get_full_path|urlencode }}" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-amber hover:opacity-90">Edit Riwayat</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if equipment.photo %}
+<div id="equipmentPhotoLightbox" onclick="closePhotoLightbox('equipmentPhotoLightbox')" class="hidden fixed inset-0 bg-black/80 z-[9999] items-center justify-center p-4 cursor-zoom-out">
+  <button type="button" onclick="closePhotoLightbox('equipmentPhotoLightbox')" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xl">✕</button>
+  <img src="{{ equipment.photo.url }}" alt="{{ equipment.name }}" onclick="event.stopPropagation()" class="max-w-full max-h-full object-contain rounded-[10px] cursor-default">
+</div>
+{% endif %}
+
+{% if log.photo_before %}
+<div id="beforeLightbox" onclick="closePhotoLightbox('beforeLightbox')" class="hidden fixed inset-0 bg-black/80 z-[9999] items-center justify-center p-4 cursor-zoom-out">
+  <button type="button" onclick="closePhotoLightbox('beforeLightbox')" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xl">✕</button>
+  <img src="{{ log.photo_before.url }}" alt="Foto sebelum maintenance" onclick="event.stopPropagation()" class="max-w-full max-h-full object-contain rounded-[10px] cursor-default">
+</div>
+{% endif %}
+
+{% if log.photo_after %}
+<div id="afterLightbox" onclick="closePhotoLightbox('afterLightbox')" class="hidden fixed inset-0 bg-black/80 z-[9999] items-center justify-center p-4 cursor-zoom-out">
+  <button type="button" onclick="closePhotoLightbox('afterLightbox')" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xl">✕</button>
+  <img src="{{ log.photo_after.url }}" alt="Foto sesudah maintenance" onclick="event.stopPropagation()" class="max-w-full max-h-full object-contain rounded-[10px] cursor-default">
+</div>
+{% endif %}
+
+{% if log.photo_receipt %}
+<div id="receiptLightbox" onclick="closePhotoLightbox('receiptLightbox')" class="hidden fixed inset-0 bg-black/80 z-[9999] items-center justify-center p-4 cursor-zoom-out">
+  <button type="button" onclick="closePhotoLightbox('receiptLightbox')" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xl">✕</button>
+  <img src="{{ log.photo_receipt.url }}" alt="Foto kwitansi maintenance" onclick="event.stopPropagation()" class="max-w-full max-h-full object-contain rounded-[10px] cursor-default">
+</div>
+{% endif %}
+
+<script>
+  function openPhotoLightbox(id) {
+    const lightbox = document.getElementById(id);
+    if (!lightbox) return;
+    lightbox.classList.remove("hidden");
+    lightbox.classList.add("flex");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closePhotoLightbox(id) {
+    const lightbox = document.getElementById(id);
+    if (!lightbox) return;
+    lightbox.classList.add("hidden");
+    lightbox.classList.remove("flex");
+    document.body.style.overflow = "";
+  }
+
+  document.addEventListener("keydown", function(event) {
+    if (event.key !== "Escape") return;
+    document.querySelectorAll('[id$="Lightbox"]').forEach(function(lightbox) {
+      if (!lightbox.classList.contains("hidden")) {
+        lightbox.classList.add("hidden");
+        lightbox.classList.remove("flex");
+      }
+    });
+    document.body.style.overflow = "";
+  });
+</script>
+{% endblock %}

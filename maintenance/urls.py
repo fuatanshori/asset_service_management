@@ -13,4 +13,5 @@ urlpatterns = [
     path("schedules/export/", views.schedule_export, name="schedule_export"),
     path("logs/", views.log_list, name="log_list"),
     path("logs/<int:pk>/edit/", views.log_edit, name="log_edit"),
+    path("logs/<int:pk>/", views.log_detail, name="log_detail"),
 ]

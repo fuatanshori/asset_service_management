@@ -283,3 +283,15 @@ def log_edit(request, pk):
             "next_url": request.GET.get("next", ""),
         },
     )
+
+def log_detail(request, pk):
+    log = get_object_or_404(MaintenanceLog, pk=pk)
+    schedule = log.schedule
+    equipment = schedule.equipment
+
+    return render(request, "maintenance/log_detail.html", {
+        "log": log,
+        "schedule": schedule,
+        "equipment": equipment,
+        "active_page": "equipment" if request.GET.get("from") == "equipment" else "history",
+    })

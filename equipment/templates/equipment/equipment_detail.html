@@ -132,17 +132,18 @@
                 {% endif %}
               </td>
               <td class="py-2.5 font-mono">{% if s.log %}Rp{{ s.log.cost|floatformat:0 }}{% else %}—{% endif %}</td>
-              {% if user.is_authenticated %}
               <td class="py-2.5">
                 <div class="flex gap-2 flex-wrap">
+                  <a href="{% url 'log_detail' s.log.pk %}?next={{ request.get_full_path|urlencode }}&from=equipment" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-emerald-700 hover:opacity-90">Detail Riwayat</a>
+                  {% if user.is_authenticated %}
                   <a href="{% url 'schedule_edit' s.pk %}?next={{ request.get_full_path|urlencode }}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-amber hover:opacity-90">Edit Jadwal</a>
                   {% if s.log %}
                   <a href="{% url 'log_edit' s.log.pk %}?next={{ request.get_full_path|urlencode }}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-brand hover:opacity-90">Edit Riwayat</a>
                   {% endif %}
                   <a href="{% url 'schedule_delete' s.pk %}?next={{ request.get_full_path|urlencode }}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-red hover:opacity-90">Hapus</a>
+                  {% endif %}
                 </div>
               </td>
-              {% endif %}
             </tr>
             {% endfor %}
           </tbody>

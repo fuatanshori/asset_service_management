@@ -42,28 +42,22 @@
     <div class="mt-5 pt-5 border-t border-line">
       <label class="field-label mb-3 block">Dokumentasi Foto (opsional)</label>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
+        <div class="min-w-0">
           <span class="field-label">Foto Sebelum</span>
-          {% if log.photo_before %}
-            <img src="{{ log.photo_before.url }}" alt="Foto sebelum" class="w-full h-28 object-cover rounded-[10px] border border-line mb-2">
-          {% endif %}
-          {{ form.photo_before }}
+          {% if log.photo_before %}<img src="{{ log.photo_before.url }}" alt="Foto sebelum" class="w-full h-28 object-cover rounded-[10px] border border-line mb-2">{% endif %}
+          <div class="text-[12px] overflow-hidden">{{ form.photo_before }}</div>
           {% if form.photo_before.errors %}<p class="text-[12px] text-red mt-1">{{ form.photo_before.errors|join:", " }}</p>{% endif %}
         </div>
-        <div>
+        <div class="min-w-0">
           <span class="field-label">Foto Sesudah</span>
-          {% if log.photo_after %}
-            <img src="{{ log.photo_after.url }}" alt="Foto sesudah" class="w-full h-28 object-cover rounded-[10px] border border-line mb-2">
-          {% endif %}
-          {{ form.photo_after }}
+          {% if log.photo_after %}<img src="{{ log.photo_after.url }}" alt="Foto sesudah" class="w-full h-28 object-cover rounded-[10px] border border-line mb-2">{% endif %}
+          <div class="text-[12px] overflow-hidden">{{ form.photo_after }}</div>
           {% if form.photo_after.errors %}<p class="text-[12px] text-red mt-1">{{ form.photo_after.errors|join:", " }}</p>{% endif %}
         </div>
-        <div>
+        <div class="min-w-0">
           <span class="field-label">Foto Kwitansi</span>
-          {% if log.photo_receipt %}
-            <img src="{{ log.photo_receipt.url }}" alt="Foto kwitansi" class="w-full h-28 object-cover rounded-[10px] border border-line mb-2">
-          {% endif %}
-          {{ form.photo_receipt }}
+          {% if log.photo_receipt %}<img src="{{ log.photo_receipt.url }}" alt="Foto kwitansi" class="w-full h-28 object-cover rounded-[10px] border border-line mb-2">{% endif %}
+          <div class="text-[12px] overflow-hidden">{{ form.photo_receipt }}</div>
           {% if form.photo_receipt.errors %}<p class="text-[12px] text-red mt-1">{{ form.photo_receipt.errors|join:", " }}</p>{% endif %}
         </div>
       </div>

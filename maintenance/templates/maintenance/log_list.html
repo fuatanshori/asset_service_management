@@ -58,13 +58,16 @@
             <td class="px-4 py-3 text-[13px]">{{ log.technician|default:"—" }}</td>
             <td class="px-4 py-3 text-[13px]">
               {{ log.action_taken|truncatechars:60 }}
-              {% if log.photo_before or log.photo_after or log.photo_receipt %}<span title="Ada dokumentasi foto">📷</span>{% endif %}
+              {% if log.photo_before or log.photo_after or log.photo_receipt %}<span title="Ada dokumentasi foto"></span>{% endif %}
             </td>
             <td class="px-4 py-3"><span class="badge badge-{{ log.result_color }}">{{ log.get_result_display }}</span></td>
             <td class="px-4 py-3 text-[13px] font-mono">{{ log.completed_date|date:"d-m-Y"|default:"—" }}</td>
             <td class="px-4 py-3 text-[13px] font-mono">Rp{{ log.cost|floatformat:0 }}</td>
             <td class="px-4 py-3">
-              <a href="{% url 'log_edit' log.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-amber hover:opacity-90">Edit</a>
+              <div class="flex gap-2 flex-wrap">
+                <a href="{% url 'log_detail' log.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:opacity-90">Detail</a>
+                <a href="{% url 'log_edit' log.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-amber hover:opacity-90">Edit</a>
+              </div>
             </td>
           </tr>
           {% empty %}
