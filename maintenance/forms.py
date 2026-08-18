@@ -12,6 +12,9 @@ class MaintenanceScheduleForm(forms.ModelForm):
     `equipment` is rendered as a HiddenInput because the template pairs
     it with a JS search-as-you-type picker (see equipment_search view in
     the equipment app) rather than a plain <select>.
+
+    Equipment is intentionally LOCKED (disabled) once a schedule already
+    exists (edit mode) — see __init__ below.
     """
 
     class Meta:
@@ -23,6 +26,22 @@ class MaintenanceScheduleForm(forms.ModelForm):
             "maintenance_type": forms.Select(attrs={"class": INPUT_CLASS}),
             "notes": forms.Textarea(attrs={"class": INPUT_CLASS, "rows": 3}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            # Barang pada jadwal yang SUDAH ADA tidak boleh diganti lewat
+            # edit — cuma bisa dipilih pas bikin jadwal baru. Alasannya:
+            # (1) riwayat (teknisi/biaya/foto) yang sudah tercatat jadi
+            # rancu kalau barangnya diganti belakangan, dan (2)
+            # sync_equipment_status() cuma re-check status barang kalau
+            # scheduled_date/maintenance_type berubah — bukan kalau
+            # equipment-nya sendiri yang berubah, jadi status barang lama
+            # maupun baru bisa nyangkut salah kalau field ini dibiarkan
+            # bebas diedit. `disabled=True` di sini mengunci di level
+            # Django form — POST yang mencoba mengubahnya tetap diabaikan,
+            # bukan cuma dikunci secara visual di template.
+            self.fields["equipment"].disabled = True
 
     def clean_equipment(self):
         """Block scheduling a new maintenance event for equipment that's

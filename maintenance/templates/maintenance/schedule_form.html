@@ -17,11 +17,16 @@
 
       <div class="relative">
         <label class="field-label">Equipment</label>
-        <input type="text" id="equipmentSearchInput" autocomplete="off" placeholder="Klik untuk pilih atau ketik nama..."
-          value="{{ selected_equipment_label|default:'' }}" class="field-input">
+        <input type="text" id="equipmentSearchInput" autocomplete="off"
+          {% if mode == "edit" %}readonly title="Barang pada jadwal yang sudah ada tidak bisa diganti"{% else %}placeholder="Klik untuk pilih atau ketik nama..."{% endif %}
+          value="{{ selected_equipment_label|default:'' }}"
+          class="field-input{% if mode == 'edit' %} bg-bg text-muted cursor-not-allowed{% endif %}">
         <div id="equipmentResults" class="hidden absolute z-10 mt-1 w-full bg-white border border-line rounded-[10px] shadow-lg max-h-56 overflow-y-auto"></div>
         {{ form.equipment }}
         {% if form.equipment.errors %}<p class="text-[12px] text-red mt-1">{{ form.equipment.errors|join:", " }}</p>{% endif %}
+        {% if mode == "edit" %}
+        <p class="text-[11px] text-muted mt-1">Barang tidak bisa diganti setelah jadwal dibuat. Kalau salah pilih barang, hapus jadwal ini dan buat yang baru.</p>
+        {% endif %}
       </div>
 
       {% for field in form %}
@@ -86,18 +91,21 @@
     }
 
     // Klik/fokus ke kotak — langsung tampilkan daftar barang (default 10 pertama),
-    // walau belum ada yang diketik.
-    equipmentSearchInput.addEventListener('focus', () => {
-      fetchEquipmentResults(equipmentSearchInput.value.trim());
-    });
+    // walau belum ada yang diketik. Nggak jalan kalau field-nya readonly
+    // (mode edit — barang udah dikunci, nggak boleh diganti).
+    if (!equipmentSearchInput.hasAttribute('readonly')) {
+      equipmentSearchInput.addEventListener('focus', () => {
+        fetchEquipmentResults(equipmentSearchInput.value.trim());
+      });
 
-    // Sambil ngetik — filter daftar sesuai ketikan.
-    equipmentSearchInput.addEventListener('input', () => {
-      equipmentHiddenInput.value = '';
-      clearTimeout(searchTimeout);
-      const q = equipmentSearchInput.value.trim();
-      searchTimeout = setTimeout(() => fetchEquipmentResults(q), 200);
-    });
+      // Sambil ngetik — filter daftar sesuai ketikan.
+      equipmentSearchInput.addEventListener('input', () => {
+        equipmentHiddenInput.value = '';
+        clearTimeout(searchTimeout);
+        const q = equipmentSearchInput.value.trim();
+        searchTimeout = setTimeout(() => fetchEquipmentResults(q), 200);
+      });
+    }
 
     document.addEventListener('click', (e) => {
       if (!e.target.closest('#equipmentSearchInput') && !e.target.closest('#equipmentResults')) {
