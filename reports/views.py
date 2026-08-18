@@ -1,4 +1,6 @@
 # reports/views.py
+from collections import OrderedDict
+
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
@@ -111,5 +113,74 @@ def report_export_full(request):
             float(row["total_cost"] or 0),
         ])
 
+    wb.save(response)
+    return response
+
+
+def _normalize_for_grouping(value):
+    """Bikin nilai jadi case-insensitive & rapi buat keperluan
+    perbandingan grouping doang — "Ventilator", "ventilator", dan
+    " VENTILATOR " semuanya dianggap sama. None dan string kosong/spasi
+    juga disamain jadi None, biar barang yang nggak punya nilai (misal
+    nomor seri kosong) tetap konsisten dianggap "sama" sesama yang juga
+    kosong. Nilai ASLI (bukan hasil normalize ini) yang tetap dipakai
+    buat ditampilkan di baris Excel — normalisasi ini cuma buat nentuin
+    mana yang dianggap "duplikat", bukan buat ngubah data yang tersimpan
+    atau yang ditampilkan."""
+    if value is None:
+        return None
+    value = str(value).strip().casefold()
+    return value or None
+
+
+def _group_equipment_for_summary(qs):
+    """Kelompokkan Equipment berdasarkan (nama, merk, tipe, nomor seri)
+    — barang yang persis sama di 4 field ini (case-insensitive, lihat
+    _normalize_for_grouping) dianggap "duplikat" dan digabung jadi 1
+    baris. Berguna khususnya buat barang generik/nggak punya nomor seri
+    unik (banyak kejadian di data hasil import Excel lama), yang tanpa
+    ini bakal keliatan sebagai baris berulang identik — termasuk kalau
+    cuma beda huruf besar/kecil doang pas ngetik data.
+
+    Field selain 4 itu (status, lokasi, tahun, dst) diambil dari
+    ANGGOTA PERTAMA tiap kelompok (diurutkan nama lalu id) — kalau
+    field itu beda-beda antar anggota kelompok yang digabung, cuma satu
+    nilai representatif yang ditampilkan, bukan semuanya."""
+    groups = OrderedDict()
+    for item in qs.order_by("name", "pk"):
+        key = (
+            _normalize_for_grouping(item.name),
+            _normalize_for_grouping(item.brand),
+            _normalize_for_grouping(item.model_type),
+            _normalize_for_grouping(item.serial_number),
+        )
+        if key not in groups:
+            groups[key] = {"representative": item, "count": 0}
+        groups[key]["count"] += 1
+    return groups
+
+
+@login_required
+def report_export_equipment_summary(request):
+    """Export ringkasan Data Barang — barang dengan nama, merk, tipe, &
+    nomor seri yang sama persis digabung jadi 1 baris, dengan kolom
+    "Total" (paling kanan) menunjukkan berapa banyak barang fisik yang
+    digabung ke baris itu. Export terpisah dari equipment_export biasa
+    (yang tetap satu baris per barang) — biar kebutuhan detail per-item
+    (dipakai juga di report_export_full) tetap nggak kesentuh."""
+    qs = Equipment.objects.all()
+    groups = _group_equipment_for_summary(qs)
+
+    response = HttpResponse(content_type="application/ms-excel")
+    response["Content-Disposition"] = 'attachment; filename="ringkasan_barang.xlsx"'
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Ringkasan Barang"
+    ws.append(EQUIPMENT_EXPORT_HEADERS + ["Total"])
+    for data in groups.values():
+        row = equipment_export_row(data["representative"])
+        row.append(data["count"])
+        ws.append(row)
     wb.save(response)
     return response

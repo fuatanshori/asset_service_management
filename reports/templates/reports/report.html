@@ -147,6 +147,7 @@
     <p class="text-[13.5px] text-muted mb-4">Butuh data lengkap per baris? Download langsung, atau buka <a href="{% url 'equipment_list' %}" class="text-brand hover:underline">Data Barang</a> buat lihat/filter satu-satu.</p>
     <div class="flex flex-wrap gap-2.5">
       <a href="{% url 'equipment_export' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬇️ Data Barang (Excel)</a>
+      <a href="{% url 'report_export_equipment_summary' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">📊 Ringkasan Barang, Digabung (Excel)</a>
       <a href="{% url 'schedule_export' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬇️ Jadwal &amp; Riwayat (Excel)</a>
       <a href="{% url 'report_export_full' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">⬇️ Semua Sekaligus (Excel Multi-Sheet)</a>
     </div>

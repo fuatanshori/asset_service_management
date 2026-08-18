@@ -14,7 +14,7 @@ services:
     volumes:
       - asset_service_management_system_media:/app/media
     ports:
-      - "127.0.0.1:8000:8000"
+      - "8001:8001"
     command: bash -c "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:8000 --timeout 600 --workers 1 core.wsgi:application"
     networks:
       - asset-service-management-network

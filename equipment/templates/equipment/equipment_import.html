@@ -1,0 +1,74 @@
+{# equipment/templates/equipment/equipment_import.html #}
+{% extends "base.html" %}
+{% block title %}Import Data Barang{% endblock %}
+{% block content %}
+
+  <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+    <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">Import Data Barang dari Excel</h1>
+    <a href="{% url 'equipment_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Kembali</a>
+  </div>
+
+  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5 max-w-[640px]">
+    <h2 class="font-display text-[15px] font-semibold mb-2">Format Kolom yang Dibaca</h2>
+    <p class="text-[13px] text-muted mb-3">Baris pertama dianggap header (dilewati). Urutan kolom dari kiri ke kanan, persis sesuai file kamu:</p>
+    <ol class="text-[13px] font-mono bg-bg rounded-[10px] p-3 space-y-1">
+      <li>serial_number <span class="text-muted">(boleh kosong, tapi kalau diisi harus unik)</span></li>
+      <li>name <span class="text-red">*wajib</span></li>
+      <li>brand</li>
+      <li>model_type</li>
+      <li>acquisition_year <span class="text-muted">(boleh kosong/bukan angka — dikosongin otomatis kalau invalid)</span></li>
+      <li>status <span class="text-muted">(active/aktif atau damaged/rusak — selain itu default Aktif)</span></li>
+      <li>notes</li>
+      <li>photo <span class="text-muted">(diabaikan — upload foto manual lewat Edit)</span></li>
+      <li>latitude <span class="text-muted">(diabaikan)</span></li>
+      <li>longitude <span class="text-muted">(diabaikan)</span></li>
+      <li>location_name <span class="text-muted">(diabaikan — isi manual lewat Edit kalau perlu)</span></li>
+      <li>created_at <span class="text-muted">(diabaikan — otomatis waktu import)</span></li>
+      <li>updated_at <span class="text-muted">(diabaikan — otomatis waktu import)</span></li>
+    </ol>
+    <p class="text-[12px] text-muted mt-3">
+      Status dibaca dari kolom <strong>status</strong> di Excel (nilai lain/kosong otomatis jadi <strong>Aktif</strong>).
+      Baris yang field wajibnya kosong, tahunnya bukan angka, atau nomor serinya udah kepakai akan dilewati (nggak bikin gagal keseluruhan import).
+    </p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" class="bg-white border border-line rounded-xl2 p-5 sm:p-6 max-w-[640px]">
+    {% csrf_token %}
+    <label class="field-label">{{ form.file.label }}</label>
+    {{ form.file }}
+    {% if form.file.errors %}<p class="text-[12px] text-red mt-1">{{ form.file.errors|join:", " }}</p>{% endif %}
+    <button type="submit" class="mt-4 px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">⬆️ Import</button>
+  </form>
+
+  {% if results %}
+  <div class="mt-5 max-w-[640px] space-y-5">
+
+    {% if results.created %}
+    <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+      <h2 class="font-display text-[15px] font-semibold mb-3 text-green">✅ {{ results.created|length }} Barang Berhasil Diimpor</h2>
+      <ul class="text-[13px] divide-y divide-line max-h-64 overflow-y-auto">
+        {% for item in results.created %}
+        <li class="py-1.5">
+          <a href="{% url 'equipment_detail' item.pk %}" class="hover:text-brand">{{ item.name }}</a>
+          <span class="text-muted font-mono">({{ item.serial_number }})</span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {% if results.errors %}
+    <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+      <h2 class="font-display text-[15px] font-semibold mb-3 text-amber">⚠️ {{ results.errors|length }} Baris Dilewati</h2>
+      <ul class="text-[13px] text-muted divide-y divide-line max-h-64 overflow-y-auto">
+        {% for error in results.errors %}
+        <li class="py-1.5">{{ error }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+  </div>
+  {% endif %}
+
+{% endblock %}

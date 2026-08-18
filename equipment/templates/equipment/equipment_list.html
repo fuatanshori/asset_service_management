@@ -5,8 +5,13 @@
 
   <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
     <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">Data Barang</h1>
-    <div class="flex flex-wrap gap-2.5">
+    <div class="flex flex-wrap items-center gap-2.5">
+      <div class="flex items-center gap-1 bg-bg rounded-[10px] p-1">
+        <button type="button" id="viewListBtn" onclick="setEquipmentView('list')" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold transition-colors">☰ List</button>
+        <button type="button" id="viewGridBtn" onclick="setEquipmentView('grid')" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold transition-colors">▦ Grid</button>
+      </div>
       <a href="{% url 'equipment_map' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">🗺️ Peta Barang</a>
+      <a href="{% url 'equipment_import' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬆️ Import Excel</a>
       <a href="{% url 'equipment_export' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬇️ Export Excel</a>
       <a href="{% url 'equipment_add' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">+ Tambah Barang</a>
     </div>
@@ -57,71 +62,132 @@
     </div>
   </form>
 
-  <form id="bulkPrintForm" method="get" action="{% url 'equipment_qrcode_print_bulk' %}" target="_blank">
-    <div class="bg-white border border-line rounded-xl2 overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full min-w-[820px] border-collapse">
-          <thead>
-            <tr class="bg-bg/60">
-              <th class="px-4 py-3"><input type="checkbox" id="selectAll"></th>
-              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">QR Code</th>
-              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Foto</th>
-              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Nama Barang</th>
-              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Merk</th>
-              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tipe</th>
-              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">No. Seri</th>
-              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tahun</th>
-              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Status</th>
-              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Aksi</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for item in equipment_list %}
-            <tr class="border-t border-line">
-              <td class="px-4 py-3"><input type="checkbox" name="ids" value="{{ item.pk }}" class="rowCheckbox"></td>
-              <td class="px-4 py-3">
-                <a href="{% url 'equipment_detail' item.pk %}">
-                  <img src="{% url 'equipment_qrcode' item.pk %}?size=3"
-                       alt="QR {{ item.name }}" class="w-9 h-9 border border-line rounded-[6px]">
-                </a>
-              </td>
-              <td class="px-4 py-3">
-                {% if item.photo %}
-                  <img src="{{ item.photo.url }}" alt="{{ item.name }}" class="w-9 h-9 object-cover rounded-[6px] border border-line">
-                {% else %}
-                  <div class="w-9 h-9 rounded-[6px] border-[1.5px] border-dashed border-line"></div>
-                {% endif %}
-              </td>
-              <td class="px-4 py-3 text-[13px] font-semibold">{{ item.name }}</td>
-              <td class="px-4 py-3 text-[13px]">{{ item.brand }}</td>
-              <td class="px-4 py-3 text-[13px]">{{ item.model_type }}</td>
-              <td class="px-4 py-3 text-[13px] font-mono">{{ item.serial_number|default:"—" }}</td>
-              <td class="px-4 py-3 text-[13px]">{{ item.acquisition_year }}</td>
-              <td class="px-4 py-3"><span class="badge badge-{{ item.status_color }}">{{ item.get_status_display }}</span></td>
-              <td class="px-4 py-3">
-                <div class="flex gap-2">
-                  <a href="{% url 'equipment_detail' item.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-green hover:opacity-90">Detail</a>
-                  <a href="{% url 'equipment_edit' item.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-amber hover:opacity-90">Edit</a>
-                  <a href="{% url 'equipment_delete' item.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-red hover:opacity-90">Hapus</a>
-                </div>
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="10" class="text-center px-5 pt-11 pb-12 text-[13.5px] text-muted border-t border-line">
-                <div class="w-[38px] h-[38px] mx-auto mb-3 rounded-[10px] border-[1.5px] border-dashed border-line
-                            flex items-center justify-center text-line font-mono text-[15px]">···</div>
-                Belum ada barang.
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+  <form id="bulkActionsForm" method="get" action="{% url 'equipment_qrcode_print_bulk' %}" target="_blank">
+    {% csrf_token %}
+
+    {# ===================== LIST VIEW (tabel) ===================== #}
+    <div id="listView">
+      <div class="bg-white border border-line rounded-xl2 overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[820px] border-collapse">
+            <thead>
+              <tr class="bg-bg/60">
+                <th class="px-4 py-3"><input type="checkbox" id="selectAllList"></th>
+                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">QR Code</th>
+                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Foto</th>
+                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Nama Barang</th>
+                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Merk</th>
+                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tipe</th>
+                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">No. Seri</th>
+                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tahun</th>
+                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Status</th>
+                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in equipment_list %}
+              <tr class="border-t border-line">
+                <td class="px-4 py-3"><input type="checkbox" name="ids" value="{{ item.pk }}" class="rowCheckbox"></td>
+                <td class="px-4 py-3">
+                  <a href="{% url 'equipment_detail' item.pk %}">
+                    <img src="{% url 'equipment_qrcode' item.pk %}?size=3"
+                         alt="QR {{ item.name }}" class="w-9 h-9 border border-line rounded-[6px]">
+                  </a>
+                </td>
+                <td class="px-4 py-3">
+                  {% if item.photo %}
+                    <img src="{{ item.photo.url }}" alt="{{ item.name }}" class="w-9 h-9 object-cover rounded-[6px] border border-line">
+                  {% else %}
+                    <div class="w-9 h-9 rounded-[6px] border-[1.5px] border-dashed border-line"></div>
+                  {% endif %}
+                </td>
+                <td class="px-4 py-3 text-[13px] font-semibold">{{ item.name }}</td>
+                <td class="px-4 py-3 text-[13px]">{{ item.brand }}</td>
+                <td class="px-4 py-3 text-[13px]">{{ item.model_type }}</td>
+                <td class="px-4 py-3 text-[13px] font-mono">{{ item.serial_number|default:"—" }}</td>
+                <td class="px-4 py-3 text-[13px]">{{ item.acquisition_year|default:"—" }}</td>
+                <td class="px-4 py-3"><span class="badge badge-{{ item.status_color }}">{{ item.get_status_display }}</span></td>
+                <td class="px-4 py-3">
+                  <div class="flex gap-2">
+                    <a href="{% url 'equipment_detail' item.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-green hover:opacity-90">Detail</a>
+                    <a href="{% url 'equipment_edit' item.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-amber hover:opacity-90">Edit</a>
+                    <a href="{% url 'equipment_delete' item.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-red hover:opacity-90">Hapus</a>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="10" class="text-center px-5 pt-11 pb-12 text-[13.5px] text-muted border-t border-line">
+                  <div class="w-[38px] h-[38px] mx-auto mb-3 rounded-[10px] border-[1.5px] border-dashed border-line
+                              flex items-center justify-center text-line font-mono text-[15px]">···</div>
+                  Belum ada barang.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
-    <div class="mt-4">
-      <button type="submit" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-ink hover:bg-brand-dark transition-colors">🏷️ Cetak Label QR Terpilih</button>
+
+    {# ===================== GRID VIEW (kartu) ===================== #}
+    <div id="gridView" class="hidden">
+      <div class="bg-white border border-line rounded-xl2 p-4 mb-4 flex items-center gap-2.5">
+        <input type="checkbox" id="selectAllGrid">
+        <label for="selectAllGrid" class="text-[13px] font-semibold cursor-pointer">Pilih semua</label>
+      </div>
+
+      {% if equipment_list %}
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        {% for item in equipment_list %}
+        <div class="bg-white border border-line rounded-xl2 overflow-hidden">
+          <div class="relative">
+            <label class="absolute top-2 left-2 z-10 w-6 h-6 rounded-[6px] bg-white/90 border border-line flex items-center justify-center cursor-pointer">
+              <input type="checkbox" name="ids" value="{{ item.pk }}" class="rowCheckboxGrid">
+            </label>
+            {% if item.photo %}
+              <img src="{{ item.photo.url }}" alt="{{ item.name }}" class="w-full h-32 object-cover">
+            {% else %}
+              <div class="w-full h-32 bg-bg flex items-center justify-center text-muted text-[11px]">Tidak ada foto</div>
+            {% endif %}
+            <span class="absolute top-2 right-2 badge badge-{{ item.status_color }}">{{ item.get_status_display }}</span>
+          </div>
+          <div class="p-3">
+            <p class="text-[13px] font-semibold truncate" title="{{ item.name }}">{{ item.name }}</p>
+            <p class="text-[11.5px] text-muted truncate">{{ item.brand }}{% if item.model_type %} · {{ item.model_type }}{% endif %}</p>
+            <p class="text-[11px] font-mono text-muted mt-0.5">{{ item.serial_number|default:"—" }}</p>
+            <div class="flex gap-1.5 mt-3">
+              <a href="{% url 'equipment_detail' item.pk %}" class="flex-1 text-center px-2 py-1.5 rounded-[6px] text-[11px] font-semibold text-white bg-green hover:opacity-90">Detail</a>
+              <a href="{% url 'equipment_edit' item.pk %}" class="flex-1 text-center px-2 py-1.5 rounded-[6px] text-[11px] font-semibold text-white bg-amber hover:opacity-90">Edit</a>
+              <a href="{% url 'equipment_delete' item.pk %}" class="flex-1 text-center px-2 py-1.5 rounded-[6px] text-[11px] font-semibold text-white bg-red hover:opacity-90">Hapus</a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="bg-white border border-line rounded-xl2 text-center px-5 pt-11 pb-12 text-[13.5px] text-muted">
+        <div class="w-[38px] h-[38px] mx-auto mb-3 rounded-[10px] border-[1.5px] border-dashed border-line
+                    flex items-center justify-center text-line font-mono text-[15px]">···</div>
+        Belum ada barang.
+      </div>
+      {% endif %}
     </div>
+
+    {# ===================== AKSI MASAL ===================== #}
+    <div class="mt-4 flex flex-wrap gap-2.5">
+      <button type="submit" formaction="{% url 'equipment_qrcode_print_bulk' %}" formmethod="get" formtarget="_blank"
+        onclick="return confirmBulkAction('cetak label QR')"
+        class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-ink hover:bg-brand-dark transition-colors">
+        🏷️ Cetak Label QR Terpilih
+      </button>
+      {% comment %} <button type="submit" formaction="{% url 'equipment_bulk_delete' %}" formmethod="post"
+        onclick="return confirmBulkDelete()"
+        class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-red hover:opacity-90 transition-colors">
+        🗑️ Hapus Terpilih
+      </button> {% endcomment %}
+    </div>
+
     {% if page_obj.paginator.num_pages > 1 %}
     <div class="flex flex-wrap items-center justify-between gap-3 mt-4">
       <p class="text-[12.5px] text-muted">
@@ -157,9 +223,77 @@
   </form>
 
   <script>
-    document.getElementById('selectAll').addEventListener('change', function() {
+    // ==== Toggle List / Grid, preferensi kesimpen di localStorage ====
+    function setEquipmentView(view) {
+      const listView = document.getElementById('listView');
+      const gridView = document.getElementById('gridView');
+      const listBtn = document.getElementById('viewListBtn');
+      const gridBtn = document.getElementById('viewGridBtn');
+
+      if (view === 'grid') {
+        listView.classList.add('hidden');
+        gridView.classList.remove('hidden');
+        gridBtn.classList.add('bg-white', 'shadow-sm');
+        listBtn.classList.remove('bg-white', 'shadow-sm');
+      } else {
+        view = 'list';
+        gridView.classList.add('hidden');
+        listView.classList.remove('hidden');
+        listBtn.classList.add('bg-white', 'shadow-sm');
+        gridBtn.classList.remove('bg-white', 'shadow-sm');
+      }
+
+      // Ganti tampilan mereset semua centang — checkbox di tampilan
+      // List & Grid itu independen, nggak ada sinkronisasi antara
+      // keduanya, jadi biar aman disamakan: mulai dari nol tiap ganti.
+      document.querySelectorAll('input[name="ids"]').forEach(cb => cb.checked = false);
+      const selectAllList = document.getElementById('selectAllList');
+      const selectAllGrid = document.getElementById('selectAllGrid');
+      if (selectAllList) selectAllList.checked = false;
+      if (selectAllGrid) selectAllGrid.checked = false;
+
+      try {
+        localStorage.setItem('equipmentListView', view);
+      } catch (e) {}
+    }
+
+    document.getElementById('selectAllList').addEventListener('change', function() {
       document.querySelectorAll('.rowCheckbox').forEach(cb => cb.checked = this.checked);
     });
+    document.getElementById('selectAllGrid').addEventListener('change', function() {
+      document.querySelectorAll('.rowCheckboxGrid').forEach(cb => cb.checked = this.checked);
+    });
+
+    function getCheckedCount() {
+      return document.querySelectorAll('input[name="ids"]:checked').length;
+    }
+
+    function confirmBulkAction(label) {
+      const count = getCheckedCount();
+      if (count === 0) {
+        alert('Pilih minimal 1 barang dulu.');
+        return false;
+      }
+      return confirm('Lanjutkan ' + label + ' untuk ' + count + ' barang terpilih?');
+    }
+
+    function confirmBulkDelete() {
+      const count = getCheckedCount();
+      if (count === 0) {
+        alert('Pilih minimal 1 barang dulu.');
+        return false;
+      }
+      return confirm('Hapus ' + count + ' barang terpilih? Jadwal & riwayat maintenance terkait ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan.');
+    }
+
+    // Muat preferensi tampilan tersimpan (default: list)
+    (function() {
+      let saved = 'list';
+      try {
+        saved = localStorage.getItem('equipmentListView') || 'list';
+      } catch (e) {}
+      setEquipmentView(saved);
+    })();
   </script>
 
 {% endblock %}

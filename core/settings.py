@@ -31,7 +31,7 @@ def env_bool(name, default=False):
 # mau deploy. Default-nya False (aman) kalau env var nggak di-set;
 # nyalain mode dev cuma lewat `export DJANGO_DEBUG=True` di lokal.
 DEBUG = env_bool("DJANGO_DEBUG", default=False)
-# DEBUG =True
+DEBUG =True
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY")
 if not SECRET_KEY:
@@ -54,7 +54,7 @@ if not SECRET_KEY:
 ALLOWED_HOSTS = [
     h.strip()
     for h in os.environ.get(
-        "DJANGO_ALLOWED_HOSTS", "project.fuatanshori.com,localhost,127.0.0.1,192.168.110.68"
+        "DJANGO_ALLOWED_HOSTS", "project.fuatanshori.com,localhost,127.0.0.1,192.168.0.156"
     ).split(",")
     if h.strip()
 ]
@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     'maintenance',
     'dashboard',
     'reports',
+    "django_extensions",
 ]
 
 MIDDLEWARE = [
@@ -123,25 +124,26 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Dev lokal (DEBUG=True) — SQLite, gampang, gak perlu nyalain MySQL
 # segala. Staging/production (DEBUG=False) — WAJIB MySQL, biar data
 # persisten lewat db_volume.
-if DEBUG:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+# if DEBUG:
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.sqlite3',
+#             'NAME': BASE_DIR / 'db.sqlite3',
+#         }
+#     }
+# else:
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': "manajemen_alat",
+        'USER': "root",
+        'PASSWORD': "RootPass123!",
+        'HOST': "localhost",
+        'PORT': "3306",
+        'OPTIONS': {'charset': 'utf8mb4'},
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': os.environ.get('MYSQL_DATABASE'),
-            'USER': os.environ.get('MYSQL_USER'),
-            'PASSWORD': os.environ.get('MYSQL_PASSWORD'),
-            'HOST': os.environ.get('MYSQL_HOST', 'db_manajemen_alat'),
-            'PORT': os.environ.get('MYSQL_PORT', '3306'),
-            'OPTIONS': {'charset': 'utf8mb4'},
-        }
-    }
+}
 
 
 # Password validation

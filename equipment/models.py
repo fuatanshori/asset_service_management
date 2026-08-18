@@ -18,11 +18,18 @@ class Equipment(models.Model):
         (STATUS_DAMAGED, "Rusak"),
     ]
 
-    serial_number = models.CharField("Nomor Seri", max_length=100, unique=True)
+    # unique=True + null=True (bukan cuma blank=True) SENGAJA dipasang
+    # bareng — biar banyak barang boleh sama-sama nggak punya nomor seri
+    # (misal data lama dari Excel yang datanya nggak lengkap) tanpa
+    # nabrak constraint unique. Di SQL, banyak baris boleh sama-sama
+    # NULL tanpa dianggap "sama"; beda kalau dikasih string kosong ""
+    # (itu tetap dianggap 1 nilai yang harus unik, jadi cuma 1 barang
+    # yang bisa punya serial number kosong kalau nggak pakai null=True).
+    serial_number = models.CharField("Nomor Seri", max_length=100, null=True, blank=True)
     name = models.CharField("Nama Barang", max_length=150)
-    brand = models.CharField("Merk", max_length=100)
+    brand = models.CharField("Merk", max_length=100, blank=True)
     model_type = models.CharField("Tipe", max_length=100, blank=True)
-    acquisition_year = models.PositiveIntegerField("Tahun Perolehan")
+    acquisition_year = models.PositiveIntegerField("Tahun Perolehan", null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_ACTIVE)
     notes = models.TextField("Keterangan", blank=True)
     photo = models.ImageField("Foto Barang", upload_to="equipment_photos/", blank=True, null=True)
@@ -38,7 +45,9 @@ class Equipment(models.Model):
         verbose_name_plural = "Equipment"
 
     def __str__(self):
-        return f"{self.name} ({self.serial_number})"
+        if self.serial_number:
+            return f"{self.name} ({self.serial_number})"
+        return self.name
 
     def get_absolute_url(self):
         return reverse("equipment_detail", args=[self.pk])

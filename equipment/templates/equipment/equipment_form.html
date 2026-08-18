@@ -39,6 +39,9 @@
         <div>
           <label class="field-label">{{ field.label }}</label>
           {{ field }}
+          {% if field.name == "status" and field.field.disabled %}
+          <p class="text-[11px] text-muted mt-1">Status dikontrol otomatis oleh jadwal maintenance yang sedang berjalan — nggak bisa diubah manual di sini.</p>
+          {% endif %}
           {% if field.errors %}<p class="text-[12px] text-red mt-1">{{ field.errors|join:", " }}</p>{% endif %}
         </div>
         {% endif %}
@@ -108,9 +111,6 @@
       }
     }
 
-    map.on('click', function(e) {
-      setLocation(e.latlng.lat, e.latlng.lng);
-    });
     map.on('click', function(e) {
       setLocation(e.latlng.lat, e.latlng.lng);
     });

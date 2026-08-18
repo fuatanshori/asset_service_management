@@ -184,7 +184,16 @@ def schedule_edit(request, pk):
 @login_required
 def schedule_delete(request, pk):
     """Hapus jadwal. Default balik ke daftar Jadwal, kecuali diakses
-    dengan ?next=<url>."""
+    dengan ?next=<url>.
+
+    Staf juga bisa pilih status akhir barang (Aktif/Rusak) lewat form
+    di halaman konfirmasi — soalnya sync_equipment_status() otomatis
+    balikin status ke Aktif kalau nggak ada jadwal tersisa sama sekali
+    buat barang itu, padahal barangnya bisa aja masih beneran rusak
+    (misal barang hasil import Excel berstatus Rusak yang kebetulan
+    punya jadwal nyasar yang perlu dihapus). Pilihan staf di form ini
+    diterapkan SETELAH sync_equipment_status() jalan, jadi selalu jadi
+    keputusan akhir."""
     schedule = MaintenanceSchedule.objects.filter(pk=pk).first()
     if schedule is None:
         messages.warning(request, "Jadwal ini sudah tidak ada (mungkin sudah dihapus sebelumnya).")
@@ -194,6 +203,14 @@ def schedule_delete(request, pk):
         equipment = schedule.equipment
         schedule.delete()
         sync_equipment_status(equipment)
+
+        chosen_status = request.POST.get("resulting_status")
+        if chosen_status in (Equipment.STATUS_ACTIVE, Equipment.STATUS_DAMAGED):
+            equipment.refresh_from_db()
+            if equipment.status != chosen_status:
+                equipment.status = chosen_status
+                equipment.save(update_fields=["status", "updated_at"])
+
         messages.success(request, "Jadwal maintenance berhasil dihapus.")
         return redirect(_safe_next_url(request, reverse("schedule_list")))
     return render(

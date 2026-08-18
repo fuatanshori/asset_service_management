@@ -11,9 +11,9 @@ from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
-from openpyxl import Workbook
+from openpyxl import Workbook, load_workbook
 
-from .forms import EquipmentFilterForm, EquipmentForm
+from .forms import EquipmentFilterForm, EquipmentForm, EquipmentImportForm
 from .models import Equipment
 
 
@@ -35,6 +35,102 @@ def equipment_export_row(item):
         timezone.localtime(item.created_at).strftime("%d-%m-%Y %H:%M"),
         timezone.localtime(item.updated_at).strftime("%d-%m-%Y %H:%M"),
     ]
+
+
+# ---------- Import helpers (dipakai equipment_import) ----------
+
+# Urutan kolom PERSIS sesuai file Excel asli (13 kolom, header baris 1).
+# Beberapa kolom SENGAJA nggak dipakai buat import (photo, latitude,
+# longitude, location_name, created_at, updated_at) — nggak bisa atau
+# nggak perlu diimpor lewat Excel — tapi tetap didaftar di sini biar
+# posisi kolom-kolom lain nggak geser pas dibaca.
+EQUIPMENT_IMPORT_HEADERS = [
+    "serial_number", "name", "brand", "model_type", "acquisition_year",
+    "status", "notes", "photo", "latitude", "longitude", "location_name",
+    "created_at", "updated_at",
+]
+
+# Nilai status di Excel dicocokkan case-insensitive ke status internal
+# aplikasi. Nilai yang nggak dikenali (atau kosong) default ke Aktif.
+STATUS_IMPORT_MAP = {
+    "active": Equipment.STATUS_ACTIVE,
+    "aktif": Equipment.STATUS_ACTIVE,
+    "damaged": Equipment.STATUS_DAMAGED,
+    "rusak": Equipment.STATUS_DAMAGED,
+}
+
+
+def _parse_import_row(row_num, row):
+    """Validasi & bersihin satu baris Excel jadi dict siap dipakai
+    Equipment.objects.create(). Return (data_dict, None) kalau valid,
+    (None, pesan_error) kalau ada yang salah — baris itu dilewati, baris
+    lain tetap diproses.
+
+    Kolom yang diawali underscore (_photo, _latitude, dst) SENGAJA
+    diterima tapi diabaikan — nggak bisa/nggak perlu diimpor lewat
+    Excel (foto butuh file asli, created_at/updated_at otomatis dari
+    model, dst) — cuma dijaga posisinya biar kolom lain nggak geser.
+
+    name wajib. brand, serial_number, & acquisition_year BOLEH kosong
+    (data lama sering nggak lengkap) — serial_number kosong disimpan
+    sebagai None (bukan string kosong), biar banyak barang boleh
+    sama-sama nggak punya nomor seri tanpa nabrak constraint unique di
+    model (lihat catatan di Equipment.serial_number).
+
+    status dibaca dari Excel (active/aktif -> Aktif, damaged/rusak ->
+    Rusak) — nilai lain atau kosong default ke Aktif. Ini AMAN dipasang
+    langsung meski barang belum punya jadwal maintenance: aturan "tanpa
+    jadwal = Aktif" di sync_equipment_status() cuma jalan pas ada
+    log/jadwal disave, bukan dicek ulang terus-menerus — jadi status
+    hasil impor kesimpen apa adanya sampai memang ada aktivitas
+    maintenance beneran buat barang itu."""
+    values = (list(row) + [None] * len(EQUIPMENT_IMPORT_HEADERS))[: len(EQUIPMENT_IMPORT_HEADERS)]
+    (
+        serial_number, name, brand, model_type, acquisition_year,
+        status_raw, notes, _photo, _latitude, _longitude, _location_name,
+        _created_at, _updated_at,
+    ) = values
+
+    name = str(name).strip() if name not in (None, "") else ""
+    brand = str(brand).strip() if brand not in (None, "") else ""
+    serial_number = str(serial_number).strip() if serial_number not in (None, "") else ""
+
+    if not name:
+        return None, f"Baris {row_num}: Nama Barang kosong — dilewati."
+
+    if acquisition_year in (None, ""):
+        acquisition_year = None
+    else:
+        try:
+            acquisition_year = int(acquisition_year)
+        except (TypeError, ValueError):
+            # Nangkep kasus kayak "2020.0" (angka desimal dalam bentuk
+            # teks, sering dari hasil export/formula sistem lain) —
+            # int() langsung nolak string berdesimal, jadi dicoba lewat
+            # float() dulu sebelum beneran nyerah.
+            try:
+                acquisition_year = int(float(acquisition_year))
+            except (TypeError, ValueError):
+                acquisition_year = None  # beneran bukan angka — dikosongin, bukan nolak baris
+
+    if serial_number:
+        if Equipment.objects.filter(serial_number=serial_number).exists():
+            return None, f"Baris {row_num}: Nomor Seri '{serial_number}' sudah terdaftar — dilewati."
+    else:
+        serial_number = None  # None (bukan ""), biar aman di kolom unique=True
+
+    status_key = str(status_raw).strip().lower() if status_raw not in (None, "") else ""
+    status = STATUS_IMPORT_MAP.get(status_key, Equipment.STATUS_ACTIVE)
+
+    return {
+        "name": name,
+        "brand": brand,
+        "model_type": str(model_type).strip() if model_type not in (None, "") else "",
+        "serial_number": serial_number,
+        "acquisition_year": acquisition_year,
+        "status": status,
+        "notes": str(notes).strip() if notes not in (None, "") else "",
+    }, None
 
 
 # ---------- Equipment ----------
@@ -73,7 +169,8 @@ def equipment_list(request):
         "filter_querystring": querydict.urlencode(),
         "brand_choices": Equipment.objects.values_list("brand", flat=True).distinct(),
         "model_type_choices": Equipment.objects.values_list("model_type", flat=True).distinct(),
-        "year_choices": Equipment.objects.values_list("acquisition_year", flat=True)
+        "year_choices": Equipment.objects.exclude(acquisition_year__isnull=True)
+        .values_list("acquisition_year", flat=True)
         .distinct()
         .order_by("-acquisition_year"),
     }
@@ -142,6 +239,65 @@ def equipment_delete(request, pk):
 
 
 @login_required
+def equipment_import(request):
+    """Import massal Equipment dari file Excel (.xlsx) — dipakai buat
+    migrasi data awal dari spreadsheet inventaris lama. Baris pertama
+    dianggap header dan dilewati; urutan kolom lihat
+    EQUIPMENT_IMPORT_HEADERS.
+
+    Semua barang yang berhasil diimpor otomatis Status = Aktif (default
+    field status di model, sengaja nggak di-override di sini) dan
+    Dibuat/Diubah Pada = waktu import (otomatis dari auto_now_add /
+    auto_now di model, nggak perlu — dan nggak bisa — diisi manual).
+
+    Baris yang error (field wajib kosong, tahun nggak valid, nomor seri
+    udah kepakai) dilewati satu-satu, bukan bikin seluruh import gagal —
+    daftar barang yang berhasil & baris yang dilewati sama-sama
+    ditampilin di akhir."""
+    results = None
+    if request.method == "POST":
+        form = EquipmentImportForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                wb = load_workbook(form.cleaned_data["file"], data_only=True)
+                ws = wb.active
+            except Exception:
+                messages.error(
+                    request,
+                    "Gagal membaca file Excel — pastikan formatnya benar (.xlsx) dan tidak corrupt.",
+                )
+                return render(
+                    request,
+                    "equipment/equipment_import.html",
+                    {"form": form, "active_page": "equipment", "results": None},
+                )
+
+            created, errors = [], []
+            for row_num, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
+                if row is None or all(cell in (None, "") for cell in row):
+                    continue  # baris kosong, lewati diam-diam
+                data, error = _parse_import_row(row_num, row)
+                if error:
+                    errors.append(error)
+                    continue
+                created.append(Equipment.objects.create(**data))
+
+            results = {"created": created, "errors": errors}
+            if created:
+                messages.success(request, f"{len(created)} barang berhasil diimpor.")
+            if errors:
+                messages.warning(request, f"{len(errors)} baris dilewati — lihat detail di bawah.")
+            form = EquipmentImportForm()  # form kosong lagi biar siap import berikutnya
+    else:
+        form = EquipmentImportForm()
+    return render(
+        request,
+        "equipment/equipment_import.html",
+        {"form": form, "active_page": "equipment", "results": results},
+    )
+
+
+@login_required
 def equipment_search(request):
     """AJAX endpoint untuk search-as-you-type di form Jadwal (app maintenance).
     Barang yang sedang "Dalam Perbaikan" atau "Dijadwalkan" sengaja tidak
@@ -151,10 +307,20 @@ def equipment_search(request):
     q = request.GET.get("q", "").strip()
     qs = Equipment.objects.exclude(status__in=[Equipment.STATUS_UNDER_REPAIR, Equipment.STATUS_SCHEDULED])
     if q:
-        qs = qs.filter(
-            Q(name__icontains=q) | Q(brand__icontains=q) | Q(model_type__icontains=q)
+        search_filter = (
+            Q(name__icontains=q)
+            | Q(brand__icontains=q)
+            | Q(model_type__icontains=q)
             | Q(serial_number__icontains=q)
+            | Q(location_name__icontains=q)
+            | Q(notes__icontains=q)
         )
+        # acquisition_year field-nya integer — icontains langsung ke
+        # field angka nggak reliable di semua database (bisa error kalau
+        # q bukan angka). Cuma diikutkan kalau q-nya emang murni angka.
+        if q.isdigit():
+            search_filter |= Q(acquisition_year=int(q))
+        qs = qs.filter(search_filter)
     # "label" dipertahankan buat ngisi kotak input pas dipilih (format
     # ringkas, dipakai juga di selected_equipment_label view lain).
     # Field lainnya buat nampilin detail lebih informatif di dropdown
