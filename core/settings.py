@@ -54,7 +54,7 @@ if not SECRET_KEY:
 ALLOWED_HOSTS = [
     h.strip()
     for h in os.environ.get(
-        "DJANGO_ALLOWED_HOSTS", "project.fuatanshori.com,localhost,127.0.0.1"
+        "DJANGO_ALLOWED_HOSTS", "project.fuatanshori.com,localhost,127.0.0.1,192.168.110.68"
     ).split(",")
     if h.strip()
 ]
