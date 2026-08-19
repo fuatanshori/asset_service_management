@@ -239,6 +239,37 @@ def equipment_delete(request, pk):
 
 
 @login_required
+def equipment_bulk_delete(request):
+    """Hapus banyak barang sekaligus lewat checklist di Data Barang
+    (list maupun grid). Cuma nerima POST — konfirmasi udah ditangani di
+    sisi client (JS confirm()) sebelum form disubmit, jadi nggak perlu
+    halaman konfirmasi terpisah kayak hapus satuan.
+
+    Catatan: karena Data Barang dipaginasi, checklist "pilih semua"
+    cuma nyentang barang yang ADA DI HALAMAN itu — bukan seluruh hasil
+    filter di semua halaman. Kalau nanti butuh hapus semua hasil filter
+    sekaligus (lintas halaman), itu perlu fitur tambahan terpisah.
+
+    queryset.delete() (bukan loop satu-satu manual) SENGAJA dipakai —
+    lebih efisien, dan Django tetap ngirim signal pre_delete buat TIAP
+    objek satu-satu meski dihapus lewat queryset bulk (beda sama
+    bulk_create/update yang skip signal). Jadi cleanup foto fisik
+    (delete_equipment_photo_file di models.py, dan
+    delete_maintenance_log_photo_files buat riwayat yang ikut
+    ke-cascade) tetap jalan normal buat tiap barang."""
+    if request.method == "POST":
+        ids = request.POST.getlist("ids")
+        qs = Equipment.objects.filter(pk__in=ids)
+        count = qs.count()
+        if count:
+            qs.delete()
+            messages.success(request, f"{count} barang berhasil dihapus.")
+        else:
+            messages.warning(request, "Tidak ada barang yang dipilih.")
+    return redirect("equipment_list")
+
+
+@login_required
 def equipment_import(request):
     """Import massal Equipment dari file Excel (.xlsx) — dipakai buat
     migrasi data awal dari spreadsheet inventaris lama. Baris pertama

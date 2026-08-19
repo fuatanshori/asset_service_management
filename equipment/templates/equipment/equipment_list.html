@@ -3,297 +3,534 @@
 {% block title %}Data Barang{% endblock %}
 {% block content %}
 
-  <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
-    <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">Data Barang</h1>
-    <div class="flex flex-wrap items-center gap-2.5">
-      <div class="flex items-center gap-1 bg-bg rounded-[10px] p-1">
-        <button type="button" id="viewListBtn" onclick="setEquipmentView('list')" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold transition-colors">☰ List</button>
-        <button type="button" id="viewGridBtn" onclick="setEquipmentView('grid')" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold transition-colors">▦ Grid</button>
-      </div>
-      <a href="{% url 'equipment_map' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">🗺️ Peta Barang</a>
-      <a href="{% url 'equipment_import' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬆️ Import Excel</a>
-      <a href="{% url 'equipment_export' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬇️ Export Excel</a>
-      <a href="{% url 'equipment_add' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">+ Tambah Barang</a>
+<div class="flex flex-wrap justify-between items-center gap-4 mb-6">
+  <h1 class="font-display text-xl sm:text-2xl lg:text-[26px] font-semibold">Data Barang</h1>
+  <div class="flex flex-wrap items-center gap-2.5">
+    <div class="flex items-center gap-1 bg-bg rounded-[10px] p-1">
+      <button type="button" id="viewListBtn" onclick="setEquipmentView('list')" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold transition-colors">☰ List</button>
+      <button type="button" id="viewGridBtn" onclick="setEquipmentView('grid')" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold transition-colors">▦ Grid</button>
+    </div>
+    <a href="{% url 'equipment_map' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">🗺️ Peta Barang</a>
+    <a href="{% url 'equipment_import' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬆️ Import Excel</a>
+    <a href="{% url 'equipment_export' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬇️ Export Excel</a>
+    <a href="{% url 'equipment_add' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">+ Tambah Barang</a>
+  </div>
+</div>
+
+<form method="get" class="bg-white border border-line rounded-xl2 p-5 mb-5">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+    <div>
+      <label class="field-label">Cari</label>
+      <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Nama / Merk / Tipe" class="field-input">
+    </div>
+    <div>
+      <label class="field-label">Merk</label>
+      <select name="brand" class="field-input">
+        <option value="">Semua</option>
+        {% for b in brand_choices %}
+          <option value="{{ b }}" {% if request.GET.brand == b %}selected{% endif %}>{{ b }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="field-label">Tipe</label>
+      <select name="model_type" class="field-input">
+        <option value="">Semua</option>
+        {% for t in model_type_choices %}
+          <option value="{{ t }}" {% if request.GET.model_type == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
     </div>
   </div>
 
-  <form method="get" class="bg-white border border-line rounded-xl2 p-5 mb-5">
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-      <div>
-        <label class="field-label">Cari</label>
-        <input type="text" name="q" value="{{ request.GET.q }}" placeholder="Nama / Merk / Tipe" class="field-input">
-      </div>
-      <div>
-        <label class="field-label">Merk</label>
-        <select name="brand" class="field-input">
-          <option value="">Semua</option>
-          {% for b in brand_choices %}<option value="{{ b }}" {% if request.GET.brand == b %}selected{% endif %}>{{ b }}</option>{% endfor %}
-        </select>
-      </div>
-      <div>
-        <label class="field-label">Tipe</label>
-        <select name="model_type" class="field-input">
-          <option value="">Semua</option>
-          {% for t in model_type_choices %}<option value="{{ t }}" {% if request.GET.model_type == t %}selected{% endif %}>{{ t }}</option>{% endfor %}
-        </select>
-      </div>
-    </div>
-    <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
-      <div>
-        <label class="field-label">Tahun</label>
-        <select name="acquisition_year" class="field-input">
-          <option value="">Semua</option>
-          {% for y in year_choices %}<option value="{{ y }}" {% if request.GET.acquisition_year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>{% endfor %}
-        </select>
-      </div>
-      <div>
-        <label class="field-label">Status</label>
-        <select name="status" class="field-input">
-          <option value="">Semua</option>
-          {% for value, label in form.fields.status.choices %}
-            {% if value %}<option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>{% endif %}
-          {% endfor %}
-        </select>
-      </div>
-      <div class="flex gap-2.5">
-        <button type="submit" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
-        <a href="{% url 'equipment_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Reset</a>
-      </div>
-    </div>
-  </form>
-
-  <form id="bulkActionsForm" method="get" action="{% url 'equipment_qrcode_print_bulk' %}" target="_blank">
-    {% csrf_token %}
-
-    {# ===================== LIST VIEW (tabel) ===================== #}
-    <div id="listView">
-      <div class="bg-white border border-line rounded-xl2 overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full min-w-[820px] border-collapse">
-            <thead>
-              <tr class="bg-bg/60">
-                <th class="px-4 py-3"><input type="checkbox" id="selectAllList"></th>
-                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">QR Code</th>
-                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Foto</th>
-                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Nama Barang</th>
-                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Merk</th>
-                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tipe</th>
-                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">No. Seri</th>
-                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tahun</th>
-                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Status</th>
-                <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for item in equipment_list %}
-              <tr class="border-t border-line">
-                <td class="px-4 py-3"><input type="checkbox" name="ids" value="{{ item.pk }}" class="rowCheckbox"></td>
-                <td class="px-4 py-3">
-                  <a href="{% url 'equipment_detail' item.pk %}">
-                    <img src="{% url 'equipment_qrcode' item.pk %}?size=3"
-                         alt="QR {{ item.name }}" class="w-9 h-9 border border-line rounded-[6px]">
-                  </a>
-                </td>
-                <td class="px-4 py-3">
-                  {% if item.photo %}
-                    <img src="{{ item.photo.url }}" alt="{{ item.name }}" class="w-9 h-9 object-cover rounded-[6px] border border-line">
-                  {% else %}
-                    <div class="w-9 h-9 rounded-[6px] border-[1.5px] border-dashed border-line"></div>
-                  {% endif %}
-                </td>
-                <td class="px-4 py-3 text-[13px] font-semibold">{{ item.name }}</td>
-                <td class="px-4 py-3 text-[13px]">{{ item.brand }}</td>
-                <td class="px-4 py-3 text-[13px]">{{ item.model_type }}</td>
-                <td class="px-4 py-3 text-[13px] font-mono">{{ item.serial_number|default:"—" }}</td>
-                <td class="px-4 py-3 text-[13px]">{{ item.acquisition_year|default:"—" }}</td>
-                <td class="px-4 py-3"><span class="badge badge-{{ item.status_color }}">{{ item.get_status_display }}</span></td>
-                <td class="px-4 py-3">
-                  <div class="flex gap-2">
-                    <a href="{% url 'equipment_detail' item.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-green hover:opacity-90">Detail</a>
-                    <a href="{% url 'equipment_edit' item.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-amber hover:opacity-90">Edit</a>
-                    <a href="{% url 'equipment_delete' item.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-red hover:opacity-90">Hapus</a>
-                  </div>
-                </td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="10" class="text-center px-5 pt-11 pb-12 text-[13.5px] text-muted border-t border-line">
-                  <div class="w-[38px] h-[38px] mx-auto mb-3 rounded-[10px] border-[1.5px] border-dashed border-line
-                              flex items-center justify-center text-line font-mono text-[15px]">···</div>
-                  Belum ada barang.
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    {# ===================== GRID VIEW (kartu) ===================== #}
-    <div id="gridView" class="hidden">
-      <div class="bg-white border border-line rounded-xl2 p-4 mb-4 flex items-center gap-2.5">
-        <input type="checkbox" id="selectAllGrid">
-        <label for="selectAllGrid" class="text-[13px] font-semibold cursor-pointer">Pilih semua</label>
-      </div>
-
-      {% if equipment_list %}
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {% for item in equipment_list %}
-        <div class="bg-white border border-line rounded-xl2 overflow-hidden">
-          <div class="relative">
-            <label class="absolute top-2 left-2 z-10 w-6 h-6 rounded-[6px] bg-white/90 border border-line flex items-center justify-center cursor-pointer">
-              <input type="checkbox" name="ids" value="{{ item.pk }}" class="rowCheckboxGrid">
-            </label>
-            {% if item.photo %}
-              <img src="{{ item.photo.url }}" alt="{{ item.name }}" class="w-full h-32 object-cover">
-            {% else %}
-              <div class="w-full h-32 bg-bg flex items-center justify-center text-muted text-[11px]">Tidak ada foto</div>
-            {% endif %}
-            <span class="absolute top-2 right-2 badge badge-{{ item.status_color }}">{{ item.get_status_display }}</span>
-          </div>
-          <div class="p-3">
-            <p class="text-[13px] font-semibold truncate" title="{{ item.name }}">{{ item.name }}</p>
-            <p class="text-[11.5px] text-muted truncate">{{ item.brand }}{% if item.model_type %} · {{ item.model_type }}{% endif %}</p>
-            <p class="text-[11px] font-mono text-muted mt-0.5">{{ item.serial_number|default:"—" }}</p>
-            <div class="flex gap-1.5 mt-3">
-              <a href="{% url 'equipment_detail' item.pk %}" class="flex-1 text-center px-2 py-1.5 rounded-[6px] text-[11px] font-semibold text-white bg-green hover:opacity-90">Detail</a>
-              <a href="{% url 'equipment_edit' item.pk %}" class="flex-1 text-center px-2 py-1.5 rounded-[6px] text-[11px] font-semibold text-white bg-amber hover:opacity-90">Edit</a>
-              <a href="{% url 'equipment_delete' item.pk %}" class="flex-1 text-center px-2 py-1.5 rounded-[6px] text-[11px] font-semibold text-white bg-red hover:opacity-90">Hapus</a>
-            </div>
-          </div>
-        </div>
+  <div class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end">
+    <div>
+      <label class="field-label">Tahun</label>
+      <select name="acquisition_year" class="field-input">
+        <option value="">Semua</option>
+        {% for y in year_choices %}
+          <option value="{{ y }}" {% if request.GET.acquisition_year == y|stringformat:"s" %}selected{% endif %}>{{ y }}</option>
         {% endfor %}
-      </div>
-      {% else %}
-      <div class="bg-white border border-line rounded-xl2 text-center px-5 pt-11 pb-12 text-[13.5px] text-muted">
-        <div class="w-[38px] h-[38px] mx-auto mb-3 rounded-[10px] border-[1.5px] border-dashed border-line
-                    flex items-center justify-center text-line font-mono text-[15px]">···</div>
-        Belum ada barang.
-      </div>
-      {% endif %}
+      </select>
     </div>
 
-    {# ===================== AKSI MASAL ===================== #}
-    <div class="mt-4 flex flex-wrap gap-2.5">
-      <button type="submit" formaction="{% url 'equipment_qrcode_print_bulk' %}" formmethod="get" formtarget="_blank"
-        onclick="return confirmBulkAction('cetak label QR')"
-        class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-ink hover:bg-brand-dark transition-colors">
-        🏷️ Cetak Label QR Terpilih
-      </button>
-      {% comment %} <button type="submit" formaction="{% url 'equipment_bulk_delete' %}" formmethod="post"
-        onclick="return confirmBulkDelete()"
-        class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-red hover:opacity-90 transition-colors">
-        🗑️ Hapus Terpilih
-      </button> {% endcomment %}
-    </div>
-
-    {% if page_obj.paginator.num_pages > 1 %}
-    <div class="flex flex-wrap items-center justify-between gap-3 mt-4">
-      <p class="text-[12.5px] text-muted">
-        Menampilkan {{ page_obj.start_index }}–{{ page_obj.end_index }} dari {{ page_obj.paginator.count }} barang
-      </p>
-      <div class="flex items-center gap-1.5">
-        {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
-           class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">‹ Sebelumnya</a>
-        {% endif %}
-
-        {% for num in page_obj.paginator.page_range %}
-          {% if num == page_obj.number %}
-            <span class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold text-white bg-brand">{{ num }}</span>
-          {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
-            <a href="?page={{ num }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
-               class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">{{ num }}</a>
-          {% elif num == 1 or num == page_obj.paginator.num_pages %}
-            <a href="?page={{ num }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
-               class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">{{ num }}</a>
-          {% elif num == page_obj.number|add:"-3" or num == page_obj.number|add:"3" %}
-            <span class="px-1.5 text-[12.5px] text-muted">···</span>
+    <div>
+      <label class="field-label">Status</label>
+      <select name="status" class="field-input">
+        <option value="">Semua</option>
+        {% for value, label in form.fields.status.choices %}
+          {% if value %}
+            <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
           {% endif %}
         {% endfor %}
+      </select>
+    </div>
 
-        {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
-           class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Selanjutnya ›</a>
-        {% endif %}
+    <div class="flex gap-2.5">
+      <button type="submit" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
+      <a href="{% url 'equipment_list' %}" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Reset</a>
+    </div>
+  </div>
+</form>
+
+<form id="bulkActionsForm" method="get" action="{% url 'equipment_qrcode_print_bulk' %}" target="_blank">
+  {% csrf_token %}
+
+  {# ===================== LIST VIEW ===================== #}
+  <div id="listView">
+    <div class="bg-white border border-line rounded-xl2 overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[820px] border-collapse">
+          <thead>
+            <tr class="bg-bg/60">
+              <th class="px-4 py-3">
+                <input type="checkbox" id="selectAllList">
+              </th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">QR Code</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Foto</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Nama Barang</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Merk</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tipe</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">No. Seri</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tahun</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Status</th>
+              <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Aksi</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {% for item in equipment_list %}
+            <tr class="border-t border-line">
+              <td class="px-4 py-3">
+                <input type="checkbox" name="ids" value="{{ item.pk }}" class="rowCheckbox">
+              </td>
+
+              <td class="px-4 py-3">
+                <a href="{% url 'equipment_detail' item.pk %}">
+                  <img src="{% url 'equipment_qrcode' item.pk %}?size=3"
+                       alt="QR {{ item.name }}"
+                       class="w-9 h-9 border border-line rounded-[6px]">
+                </a>
+              </td>
+
+              <td class="px-4 py-3">
+                {% if item.photo %}
+                  <a href="{% url 'equipment_detail' item.pk %}" class="block">
+                    <img src="{{ item.photo.url }}"
+                         alt="{{ item.name }}"
+                         class="w-9 h-9 object-cover rounded-[6px] border border-line hover:opacity-80 transition-opacity">
+                  </a>
+                {% else %}
+                  <a href="{% url 'equipment_detail' item.pk %}" class="block">
+                    <div class="w-9 h-9 rounded-[6px] border-[1.5px] border-dashed border-line hover:border-brand transition-colors"></div>
+                  </a>
+                {% endif %}
+              </td>
+
+              <td class="px-4 py-3 text-[13px] font-semibold">{{ item.name }}</td>
+              <td class="px-4 py-3 text-[13px]">{{ item.brand }}</td>
+              <td class="px-4 py-3 text-[13px]">{{ item.model_type }}</td>
+              <td class="px-4 py-3 text-[13px] font-mono">{{ item.serial_number|default:"—" }}</td>
+              <td class="px-4 py-3 text-[13px]">{{ item.acquisition_year|default:"—" }}</td>
+
+              <td class="px-4 py-3">
+                <span class="badge badge-{{ item.status_color }}">{{ item.get_status_display }}</span>
+              </td>
+
+              <td class="px-4 py-3">
+                <div class="flex gap-2">
+                  <a href="{% url 'equipment_detail' item.pk %}"
+                     class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-green hover:opacity-90">
+                    Detail
+                  </a>
+
+                  <a href="{% url 'equipment_edit' item.pk %}"
+                     class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-amber hover:opacity-90">
+                    Edit
+                  </a>
+
+                  <a href="{% url 'equipment_delete' item.pk %}"
+                     class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-red hover:opacity-90">
+                    Hapus
+                  </a>
+                </div>
+              </td>
+            </tr>
+
+            {% empty %}
+            <tr>
+              <td colspan="10" class="text-center px-5 pt-11 pb-12 text-[13.5px] text-muted border-t border-line">
+                <div class="w-[38px] h-[38px] mx-auto mb-3 rounded-[10px] border-[1.5px] border-dashed border-line flex items-center justify-center text-line font-mono text-[15px]">
+                  ···
+                </div>
+                Belum ada barang.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
+  </div>
+
+  {# ===================== GRID VIEW ===================== #}
+  <div id="gridView" class="hidden">
+
+    {# Select All Toolbar #}
+    <div class="bg-white border border-line rounded-xl2 px-4 py-3 mb-5 flex items-center gap-3">
+      <input type="checkbox"
+             id="selectAllGrid"
+             class="w-4 h-4 accent-brand cursor-pointer">
+
+      <label for="selectAllGrid"
+             class="text-[12.5px] font-semibold text-ink cursor-pointer select-none">
+        Pilih semua
+      </label>
+
+      <span class="text-[11px] text-muted">
+        · {{ equipment_list|length }} barang di halaman ini
+      </span>
+    </div>
+
+    {% if equipment_list %}
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+
+      {% for item in equipment_list %}
+
+      <article class="bg-white border border-line rounded-xl2 overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+
+        {# ===================== FOTO ===================== #}
+        <div class="relative aspect-[4/3] bg-bg overflow-hidden">
+
+          {# Checkbox #}
+          <label class="absolute top-3 left-3 z-20 w-8 h-8 rounded-[9px] bg-white/95 shadow-sm border border-line flex items-center justify-center cursor-pointer"
+                 onclick="event.stopPropagation()">
+
+            <input type="checkbox"
+                   name="ids"
+                   value="{{ item.pk }}"
+                   class="rowCheckboxGrid w-4 h-4 accent-brand cursor-pointer">
+          </label>
+
+          {# Foto -> Detail #}
+          <a href="{% url 'equipment_detail' item.pk %}"
+             class="block w-full h-full group"
+             aria-label="Lihat detail {{ item.name }}">
+
+            {% if item.photo %}
+
+              <img src="{{ item.photo.url }}"
+                   alt="{{ item.name }}"
+                   class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]">
+
+            {% else %}
+
+              <div class="w-full h-full bg-gradient-to-br from-bg to-line/40 flex flex-col items-center justify-center gap-2 transition-colors duration-200 group-hover:bg-line/20">
+
+                <svg class="w-10 h-10 text-muted/50"
+                     fill="none"
+                     viewBox="0 0 24 24"
+                     stroke="currentColor"
+                     stroke-width="1.4">
+                  <path stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375a1.125 1.125 0 00-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>
+                </svg>
+
+                <span class="text-[10.5px] text-muted/70 font-medium">
+                  Tanpa Foto
+                </span>
+
+              </div>
+
+            {% endif %}
+
+            {# Hover overlay #}
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 pointer-events-none"></div>
+
+          </a>
+        </div>
+
+        {# ===================== INFORMASI ===================== #}
+        <div class="p-4 flex flex-col flex-1">
+
+          <div class="flex items-start justify-between gap-3 mb-2">
+
+            <div class="min-w-0 flex-1">
+              <p class="text-[14px] font-semibold leading-[1.35] line-clamp-2"
+                 title="{{ item.name }}">
+                {{ item.name }}
+              </p>
+            </div>
+
+            <span class="badge badge-{{ item.status_color }} whitespace-nowrap flex-shrink-0 mt-0.5">
+              {{ item.get_status_display }}
+            </span>
+
+          </div>
+
+          <p class="text-[12px] text-muted truncate"
+             title="{{ item.brand|default:'—' }}{% if item.model_type %} · {{ item.model_type }}{% endif %}">
+            {{ item.brand|default:"—" }}{% if item.model_type %} · {{ item.model_type }}{% endif %}
+          </p>
+
+          <div class="mt-2 flex items-center gap-2 min-w-0">
+
+            <span class="text-[10px] uppercase tracking-[0.05em] text-muted/70 font-semibold flex-shrink-0">
+              SN
+            </span>
+
+            <p class="text-[11px] font-mono text-muted truncate"
+               title="{{ item.serial_number|default:'—' }}">
+              {{ item.serial_number|default:"—" }}
+            </p>
+
+          </div>
+
+          {# ===================== ACTION ===================== #}
+          <div class="border-t border-line mt-4 pt-3">
+
+            <div class="grid grid-cols-[1fr_1fr_36px] gap-1.5">
+
+              <a href="{% url 'equipment_detail' item.pk %}"
+                 class="flex items-center justify-center px-2 py-2 rounded-[8px] text-[11.5px] font-semibold text-white bg-green hover:opacity-90 transition-opacity">
+                Detail
+              </a>
+
+              <a href="{% url 'equipment_edit' item.pk %}"
+                 class="flex items-center justify-center px-2 py-2 rounded-[8px] text-[11.5px] font-semibold text-white bg-amber hover:opacity-90 transition-opacity">
+                Edit
+              </a>
+
+              <a href="{% url 'equipment_delete' item.pk %}"
+                 title="Hapus"
+                 class="flex items-center justify-center rounded-[8px] text-white bg-red hover:opacity-90 transition-opacity">
+                🗑️
+              </a>
+
+            </div>
+
+          </div>
+        </div>
+
+      </article>
+
+      {% endfor %}
+
+    </div>
+
+    {% else %}
+
+    <div class="bg-white border border-line rounded-xl2 text-center px-5 pt-11 pb-12 text-[13.5px] text-muted">
+
+      <div class="w-[38px] h-[38px] mx-auto mb-3 rounded-[10px] border-[1.5px] border-dashed border-line flex items-center justify-center text-line font-mono text-[15px]">
+        ···
+      </div>
+
+      Belum ada barang.
+
+    </div>
+
     {% endif %}
-  </form>
+  </div>
 
-  <script>
-    // ==== Toggle List / Grid, preferensi kesimpen di localStorage ====
-    function setEquipmentView(view) {
-      const listView = document.getElementById('listView');
-      const gridView = document.getElementById('gridView');
-      const listBtn = document.getElementById('viewListBtn');
-      const gridBtn = document.getElementById('viewGridBtn');
+  {# ===================== BULK ACTION ===================== #}
+  <div class="mt-4 flex flex-wrap gap-2.5">
 
-      if (view === 'grid') {
-        listView.classList.add('hidden');
-        gridView.classList.remove('hidden');
-        gridBtn.classList.add('bg-white', 'shadow-sm');
-        listBtn.classList.remove('bg-white', 'shadow-sm');
-      } else {
-        view = 'list';
-        gridView.classList.add('hidden');
-        listView.classList.remove('hidden');
-        listBtn.classList.add('bg-white', 'shadow-sm');
-        gridBtn.classList.remove('bg-white', 'shadow-sm');
-      }
+    <button type="submit"
+            formaction="{% url 'equipment_qrcode_print_bulk' %}"
+            formmethod="get"
+            formtarget="_blank"
+            onclick="return confirmBulkAction('cetak label QR')"
+            class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-ink hover:bg-brand-dark transition-colors">
+      🏷️ Cetak Label QR Terpilih
+    </button>
 
-      // Ganti tampilan mereset semua centang — checkbox di tampilan
-      // List & Grid itu independen, nggak ada sinkronisasi antara
-      // keduanya, jadi biar aman disamakan: mulai dari nol tiap ganti.
-      document.querySelectorAll('input[name="ids"]').forEach(cb => cb.checked = false);
-      const selectAllList = document.getElementById('selectAllList');
-      const selectAllGrid = document.getElementById('selectAllGrid');
-      if (selectAllList) selectAllList.checked = false;
-      if (selectAllGrid) selectAllGrid.checked = false;
+    <button type="submit"
+            formaction="{% url 'equipment_bulk_delete' %}"
+            formmethod="post"
+            onclick="return confirmBulkDelete()"
+            class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-red hover:opacity-90 transition-colors">
+      🗑️ Hapus Terpilih
+    </button>
 
-      try {
-        localStorage.setItem('equipmentListView', view);
-      } catch (e) {}
-    }
+  </div>
 
-    document.getElementById('selectAllList').addEventListener('change', function() {
-      document.querySelectorAll('.rowCheckbox').forEach(cb => cb.checked = this.checked);
+  {# ===================== PAGINATION ===================== #}
+  {% if page_obj.paginator.num_pages > 1 %}
+
+  <div class="flex flex-wrap items-center justify-between gap-3 mt-4">
+
+    <p class="text-[12.5px] text-muted">
+      Menampilkan {{ page_obj.start_index }}–{{ page_obj.end_index }}
+      dari {{ page_obj.paginator.count }} barang
+    </p>
+
+    <div class="flex items-center gap-1.5">
+
+      {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
+           class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">
+          ‹ Sebelumnya
+        </a>
+      {% endif %}
+
+      {% for num in page_obj.paginator.page_range %}
+
+        {% if num == page_obj.number %}
+
+          <span class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold text-white bg-brand">
+            {{ num }}
+          </span>
+
+        {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+
+          <a href="?page={{ num }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
+             class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">
+            {{ num }}
+          </a>
+
+        {% elif num == 1 or num == page_obj.paginator.num_pages %}
+
+          <a href="?page={{ num }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
+             class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">
+            {{ num }}
+          </a>
+
+        {% elif num == page_obj.number|add:"-3" or num == page_obj.number|add:"3" %}
+
+          <span class="px-1.5 text-[12.5px] text-muted">
+            ···
+          </span>
+
+        {% endif %}
+
+      {% endfor %}
+
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if filter_querystring %}&{{ filter_querystring }}{% endif %}"
+           class="px-3 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">
+          Selanjutnya ›
+        </a>
+      {% endif %}
+
+    </div>
+  </div>
+
+  {% endif %}
+
+</form>
+
+<script>
+function setEquipmentView(view) {
+  const listView = document.getElementById('listView');
+  const gridView = document.getElementById('gridView');
+  const listBtn = document.getElementById('viewListBtn');
+  const gridBtn = document.getElementById('viewGridBtn');
+
+  if (view === 'grid') {
+    listView.classList.add('hidden');
+    gridView.classList.remove('hidden');
+
+    gridBtn.classList.add('bg-white', 'shadow-sm');
+    listBtn.classList.remove('bg-white', 'shadow-sm');
+  } else {
+    view = 'list';
+
+    gridView.classList.add('hidden');
+    listView.classList.remove('hidden');
+
+    listBtn.classList.add('bg-white', 'shadow-sm');
+    gridBtn.classList.remove('bg-white', 'shadow-sm');
+  }
+
+  document.querySelectorAll('input[name="ids"]').forEach(cb => {
+    cb.checked = false;
+  });
+
+  const selectAllList = document.getElementById('selectAllList');
+  const selectAllGrid = document.getElementById('selectAllGrid');
+
+  if (selectAllList) {
+    selectAllList.checked = false;
+  }
+
+  if (selectAllGrid) {
+    selectAllGrid.checked = false;
+  }
+
+  try {
+    localStorage.setItem('equipmentListView', view);
+  } catch (e) {}
+}
+
+
+const selectAllList = document.getElementById('selectAllList');
+
+if (selectAllList) {
+  selectAllList.addEventListener('change', function() {
+    document.querySelectorAll('.rowCheckbox').forEach(cb => {
+      cb.checked = this.checked;
     });
-    document.getElementById('selectAllGrid').addEventListener('change', function() {
-      document.querySelectorAll('.rowCheckboxGrid').forEach(cb => cb.checked = this.checked);
+  });
+}
+
+
+const selectAllGrid = document.getElementById('selectAllGrid');
+
+if (selectAllGrid) {
+  selectAllGrid.addEventListener('change', function() {
+    document.querySelectorAll('.rowCheckboxGrid').forEach(cb => {
+      cb.checked = this.checked;
     });
+  });
+}
 
-    function getCheckedCount() {
-      return document.querySelectorAll('input[name="ids"]:checked').length;
-    }
 
-    function confirmBulkAction(label) {
-      const count = getCheckedCount();
-      if (count === 0) {
-        alert('Pilih minimal 1 barang dulu.');
-        return false;
-      }
-      return confirm('Lanjutkan ' + label + ' untuk ' + count + ' barang terpilih?');
-    }
+function getCheckedCount() {
+  return document.querySelectorAll('input[name="ids"]:checked').length;
+}
 
-    function confirmBulkDelete() {
-      const count = getCheckedCount();
-      if (count === 0) {
-        alert('Pilih minimal 1 barang dulu.');
-        return false;
-      }
-      return confirm('Hapus ' + count + ' barang terpilih? Jadwal & riwayat maintenance terkait ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan.');
-    }
 
-    // Muat preferensi tampilan tersimpan (default: list)
-    (function() {
-      let saved = 'list';
-      try {
-        saved = localStorage.getItem('equipmentListView') || 'list';
-      } catch (e) {}
-      setEquipmentView(saved);
-    })();
-  </script>
+function confirmBulkAction(label) {
+  const count = getCheckedCount();
+
+  if (count === 0) {
+    alert('Pilih minimal 1 barang dulu.');
+    return false;
+  }
+
+  return confirm(
+    'Lanjutkan ' + label + ' untuk ' + count + ' barang terpilih?'
+  );
+}
+
+
+function confirmBulkDelete() {
+  const count = getCheckedCount();
+
+  if (count === 0) {
+    alert('Pilih minimal 1 barang dulu.');
+    return false;
+  }
+
+  return confirm(
+    'Hapus ' + count +
+    ' barang terpilih? Jadwal & riwayat maintenance terkait ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan.'
+  );
+}
+
+
+(function() {
+  let saved = 'list';
+
+  try {
+    saved = localStorage.getItem('equipmentListView') || 'list';
+  } catch (e) {}
+
+  setEquipmentView(saved);
+})();
+</script>
 
 {% endblock %}
