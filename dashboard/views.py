@@ -7,8 +7,8 @@ import json
 from equipment.analytics import get_data_completeness, get_equipment_status_breakdown
 from equipment.models import Equipment
 from maintenance.analytics import (
-    get_cost_by_month,
     get_cost_summary,
+    get_cost_trend,
     get_maintenance_type_breakdown,
     get_overdue_schedules,
     get_result_breakdown,
@@ -36,7 +36,14 @@ def dashboard(request):
     for f in (cost_filter, type_filter, result_filter, topeq_filter, toptech_filter):
         f.is_valid()
 
-    cost_by_month = get_cost_by_month(
+    # get_cost_trend (dari maintenance.analytics) — SATU-SATUNYA fungsi
+    # "biaya per bulan" di seluruh aplikasi sekarang, dipakai bareng
+    # sama Laporan. Sebelumnya Dashboard punya fungsi terpisah
+    # (get_cost_by_month) yang salah pakai field `date` (tanggal
+    # jadwal) alih-alih `completed_date` (tanggal selesai beneran), dan
+    # nggak ngisi bulan kosong — udah dihapus, diganti ini biar nggak
+    # ada 2 sumber kebenaran yang gampang saling drift.
+    cost_by_month = get_cost_trend(
         date_from=cost_filter.cleaned_data.get("date_from"),
         date_to=cost_filter.cleaned_data.get("date_to"),
     )

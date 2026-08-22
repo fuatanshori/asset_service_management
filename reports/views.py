@@ -143,7 +143,12 @@ def report_detail_redirect(request):
 def report_export_full(request):
     """Excel satu file isinya banyak sheet — pakai helper baris yang sama
     persis dengan equipment_export & schedule_export (app equipment &
-    maintenance), biar datanya selalu identik, gak pernah drift beda."""
+    maintenance), biar datanya selalu identik, gak pernah drift beda.
+
+    Sheet "Ringkasan Barang (Digabung)" juga pakai helper grouping yang
+    sama persis dengan report_export_equipment_summary (lihat
+    _group_equipment_for_summary di bawah) — biar kontennya identik
+    dengan versi standalone-nya, cuma beda tempat aksesnya doang."""
     response = HttpResponse(content_type="application/ms-excel")
     response["Content-Disposition"] = 'attachment; filename="laporan_lengkap.xlsx"'
 
@@ -174,24 +179,45 @@ def report_export_full(request):
     for item in Equipment.objects.all():
         ws2.append(equipment_export_row(item))
 
-    # --- Sheet 3: Jadwal & Riwayat ---
-    ws3 = wb.create_sheet("Jadwal & Riwayat")
-    ws3.append(SCHEDULE_EXPORT_HEADERS)
+    # --- Sheet 3: Ringkasan Barang (Digabung) ---
+    # Sama persis logikanya sama report_export_equipment_summary —
+    # barang dengan nama+merk+tipe+no.seri yang identik (case-insensitive)
+    # digabung jadi 1 baris, kolom "Total" nunjukkin berapa unit fisik
+    # yang tergabung.
+    ws3 = wb.create_sheet("Ringkasan Barang (Digabung)")
+    ws3.append(EQUIPMENT_EXPORT_HEADERS + ["Total"])
+    groups = _group_equipment_for_summary(Equipment.objects.all())
+    for data in groups.values():
+        row = equipment_export_row(data["representative"])
+        row.append(data["count"])
+        ws3.append(row)
+
+    # --- Sheet 4: Jadwal & Riwayat ---
+    ws4 = wb.create_sheet("Jadwal & Riwayat")
+    ws4.append(SCHEDULE_EXPORT_HEADERS)
     for s in MaintenanceSchedule.objects.select_related("equipment", "log").all():
-        ws3.append(schedule_export_row(s))
+        ws4.append(schedule_export_row(s))
 
-    # --- Sheet 4: Biaya per Bulan ---
-    ws4 = wb.create_sheet("Biaya per Bulan")
-    ws4.append(["Bulan", "Total Biaya"])
-    cost_trend = get_cost_trend(limit_months=24)
+    # --- Sheet 5: Biaya per Bulan ---
+    # all_time=True (BUKAN limit_months kayak di halaman/PDF ringkas) —
+    # "Semua Sekaligus" itu arsip lengkap, jadi sheet ini juga harus
+    # nyakup SELURUH riwayat, biar konsisten sama sheet lain di file
+    # ini (Data Barang, Jadwal & Riwayat, Barang Paling Boros — yang
+    # semuanya emang udah all-time dari awal).
+    ws5 = wb.create_sheet("Biaya per Bulan")
+    cost_trend = get_cost_trend(all_time=True)
+    if cost_trend["labels"]:
+        ws5.append([f"Data dari {cost_trend['labels'][0]} sampai {cost_trend['labels'][-1]}"])
+        ws5.append([])
+    ws5.append(["Bulan", "Total Biaya"])
     for label, value in zip(cost_trend["labels"], cost_trend["values"]):
-        ws4.append([label, value])
+        ws5.append([label, value])
 
-    # --- Sheet 5: Barang Paling Boros Biaya ---
-    ws5 = wb.create_sheet("Barang Paling Boros")
-    ws5.append(["Nama", "No. Seri", "Jumlah Servis", "Total Biaya"])
+    # --- Sheet 6: Barang Paling Boros Biaya ---
+    ws6 = wb.create_sheet("Barang Paling Boros")
+    ws6.append(["Nama", "No. Seri", "Jumlah Servis", "Total Biaya"])
     for row in get_cost_by_equipment(limit=20):
-        ws5.append([
+        ws6.append([
             row["schedule__equipment__name"],
             row["schedule__equipment__serial_number"],
             row["service_count"],
@@ -200,7 +226,6 @@ def report_export_full(request):
 
     wb.save(response)
     return response
-
 
 def _pdf_static_link_callback(uri, rel):
     """xhtml2pdf butuh PATH FILE ASLI buat baca gambar (logo, dst)

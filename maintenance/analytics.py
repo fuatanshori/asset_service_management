@@ -29,23 +29,6 @@ def _filter_schedules(qs, date_from=None, date_to=None):
     return qs
 
 
-def get_cost_by_month(date_from=None, date_to=None, limit_months=12):
-    qs = _filter_logs(MaintenanceLog.objects.all(), date_from, date_to)
-    rows = list(
-        qs.annotate(month=TruncMonth("date"))
-        .values("month")
-        .annotate(total_cost=Sum("cost"))
-        .order_by("month")
-    )
-    rows = [r for r in rows if r["month"]]
-    if not date_from and not date_to:
-        rows = rows[-limit_months:]
-    return {
-        "labels": [r["month"].strftime("%b %Y") for r in rows],
-        "values": [float(r["total_cost"] or 0) for r in rows],
-    }
-
-
 def get_maintenance_type_breakdown(date_from=None, date_to=None):
     qs = _filter_schedules(MaintenanceSchedule.objects.all(), date_from, date_to)
     rows = qs.values("maintenance_type").annotate(total=Count("id")).order_by("-total")
@@ -140,6 +123,12 @@ def get_cost_summary():
 
 
 def get_month_over_month_cost():
+    """Perbandingan biaya bulan ini vs bulan lalu — dasar kalimat ringkasan
+    otomatis di Ringkasan Eksekutif. Pakai completed_date, bukan date,
+    karena biaya baru 'riil' pas kerjaan beneran kelar. change_pct sengaja
+    None kalau bulan lalu Rp0 — dari 0 ke berapa pun bukan '100%', itu
+    kenaikan tak terhingga, jadi ditampilkan sebagai pernyataan biasa,
+    bukan persentase yang menyesatkan."""
     today = timezone.localdate()
     this_month_start = today.replace(day=1)
     if this_month_start.month == 1:
@@ -166,27 +155,77 @@ def get_month_over_month_cost():
     return {"this_month": this_month_total, "last_month": last_month_total, "change_pct": change_pct}
 
 
-def get_cost_trend(date_from=None, date_to=None, limit_months=12):
+def _add_months(d, months):
+    """Tambah/kurang N bulan dari tanggal d (tanggal di-reset ke 1) —
+    buat generate rentang bulan yang berurutan tanpa perlu dependency
+    tambahan (python-dateutil dst)."""
+    month_index = d.month - 1 + months
+    year = d.year + month_index // 12
+    month = month_index % 12 + 1
+    return d.replace(year=year, month=month, day=1)
+
+
+def get_cost_trend(date_from=None, date_to=None, limit_months=12, all_time=False):
+    """Tren biaya per bulan, dikelompokkan berdasarkan completed_date
+    (kapan kerjaan beneran kelar), bukan date (tanggal jadwal).
+
+    SATU-SATUNYA fungsi "biaya per bulan" di seluruh aplikasi — dipakai
+    Dashboard MAUPUN Laporan (PDF & Excel), biar nggak ada 2 versi
+    yang gampang saling drift (sebelumnya Dashboard punya fungsi
+    terpisah get_cost_by_month yang salah pakai field `date`, bukan
+    `completed_date`, dan nggak ngisi bulan kosong — udah dihapus,
+    diganti fungsi ini semua).
+
+    SELALU ngembaliin bulan-bulan yang BERURUTAN tanpa ada yang
+    kelewat, termasuk bulan yang nggak ada biayanya sama sekali
+    (tampil sebagai 0) — biar "N bulan terakhir" selalu berarti N bulan
+    KALENDER beneran, bukan cuma N bulan yang kebetulan punya data.
+
+    date_from/date_to (opsional) nentuin rentang eksplisit. Kalau
+    keduanya nggak dikasih:
+    - all_time=True: rentangnya dari bulan PALING AWAL ada data
+      completed_date sampe bulan berjalan — buat kebutuhan export
+      arsip lengkap (misal "Semua Sekaligus"), bukan cuma cuplikan.
+    - all_time=False (default): `limit_months` bulan terakhir dari
+      bulan berjalan — buat tampilan ringkas (Dashboard, halaman
+      Laporan, PDF presentasi)."""
     qs = MaintenanceLog.objects.exclude(completed_date__isnull=True)
     if date_from:
         qs = qs.filter(completed_date__gte=date_from)
     if date_to:
         qs = qs.filter(completed_date__lte=date_to)
-    rows = list(
-        qs.annotate(month=TruncMonth("completed_date"))
+
+    cost_by_month = {
+        (r["month"].year, r["month"].month): float(r["total_cost"] or 0)
+        for r in qs.annotate(month=TruncMonth("completed_date"))
         .values("month")
         .annotate(total_cost=Sum("cost"))
-        .order_by("month")
-    )
-    if not date_from and not date_to:
-        rows = rows[-limit_months:]
-    return {
-        "labels": [r["month"].strftime("%b %Y") for r in rows],
-        "values": [float(r["total_cost"] or 0) for r in rows],
     }
+
+    today = timezone.localdate()
+    end = date_to.replace(day=1) if date_to else today.replace(day=1)
+
+    if date_from:
+        start = date_from.replace(day=1)
+    elif all_time:
+        earliest = qs.order_by("completed_date").values_list("completed_date", flat=True).first()
+        start = earliest.replace(day=1) if earliest else end
+    else:
+        start = _add_months(end, -(limit_months - 1))
+
+    labels, values = [], []
+    cursor = start
+    while cursor <= end:
+        labels.append(cursor.strftime("%b %Y"))
+        values.append(cost_by_month.get((cursor.year, cursor.month), 0.0))
+        cursor = _add_months(cursor, 1)
+
+    return {"labels": labels, "values": values}
 
 
 def get_cost_by_equipment(date_from=None, date_to=None, limit=10):
+    """Ranking barang paling 'boros' biaya servis — total Rp yang udah
+    dihabisin per barang, buat bantu keputusan servis-terus vs ganti baru."""
     qs = MaintenanceLog.objects.exclude(completed_date__isnull=True)
     if date_from:
         qs = qs.filter(completed_date__gte=date_from)
@@ -201,6 +240,22 @@ def get_cost_by_equipment(date_from=None, date_to=None, limit=10):
 
 
 def get_stale_equipment(months_threshold=6, limit=10):
+    """Barang yang belum pernah diservis sama sekali, atau udah lebih dari
+    N bulan sejak servis terakhirnya kelar — sinyal potensi keabaian.
+
+    Barang berstatus "Dijadwalkan" atau "Dalam Perbaikan" SENGAJA
+    dikeluarkan dari daftar ini — kalau statusnya itu, artinya ada
+    jadwal maintenance yang lagi AKTIF berjalan buat barang itu (belum
+    kelar, makanya completed_date-nya masih kosong dan nggak kehitung
+    "baru diservis" di query di bawah). Barang kayak gitu justru lagi
+    DITANGANI, bukan diabaikan — jadi nggak masuk akal muncul di daftar
+    "belum diservis". Daftar ini khusus buat barang yang MEMANG nggak
+    ada aktivitas apapun (status Aktif/Rusak tanpa jadwal berjalan)
+    dalam N bulan terakhir.
+
+    Ngembaliin dict {"items": [...], "total_count": N} — BUKAN cuma
+    list biasa, biar UI bisa nunjukin total sebenarnya (bisa beda dari
+    panjang `items` yang udah dipotong ke `limit`)."""
     cutoff = timezone.localdate() - timedelta(days=months_threshold * 30)
     recently_serviced_ids = (
         MaintenanceLog.objects.exclude(completed_date__isnull=True)
@@ -208,7 +263,12 @@ def get_stale_equipment(months_threshold=6, limit=10):
         .values_list("schedule__equipment_id", flat=True)
         .distinct()
     )
-    return Equipment.objects.exclude(pk__in=recently_serviced_ids).order_by("name")[:limit]
+    qs = (
+        Equipment.objects.exclude(pk__in=recently_serviced_ids)
+        .exclude(status__in=[Equipment.STATUS_SCHEDULED, Equipment.STATUS_UNDER_REPAIR])
+        .order_by("name")
+    )
+    return {"items": list(qs[:limit]), "total_count": qs.count()}
 
 
 MONTH_NAMES_ID = [
@@ -291,24 +351,3 @@ def get_cost_by_month_multi_year():
     datanya udah kekirim sekaligus di awal (termasuk breakdown
     per-barang, buat ngitung ulang Barang Paling Boros)."""
     return {year: get_cost_by_month_for_year(year) for year in get_available_cost_years()}
-
-def get_stale_equipment(months_threshold=6, limit=10):
-    """Barang yang belum pernah diservis sama sekali, atau udah lebih dari
-    N bulan sejak servis terakhirnya kelar — sinyal potensi keabaian.
-
-    Ngembaliin dict {"items": [...], "total_count": N} — BUKAN cuma
-    list biasa. Alasannya: kalau datanya banyak (bisa ratusan di RS
-    beneran), UI perlu tau TOTAL sebenarnya (buat ditampilin di
-    judul/ringkasan) — bukan cuma panjang list yang udah dipotong ke
-    `limit`, soalnya itu bakal nyesatin (misal ada 300 barang belum
-    diservis, tapi kelihatannya cuma "10 barang" kalau cuma ngitung
-    panjang list yang ditampilin)."""
-    cutoff = timezone.localdate() - timedelta(days=months_threshold * 30)
-    recently_serviced_ids = (
-        MaintenanceLog.objects.exclude(completed_date__isnull=True)
-        .filter(completed_date__gte=cutoff)
-        .values_list("schedule__equipment_id", flat=True)
-        .distinct()
-    )
-    qs = Equipment.objects.exclude(pk__in=recently_serviced_ids).order_by("name")
-    return {"items": list(qs[:limit]), "total_count": qs.count()}

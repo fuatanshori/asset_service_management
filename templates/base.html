@@ -22,10 +22,18 @@
 <body class="bg-bg text-ink font-sans antialiased min-h-screen flex flex-col">
 
     <!-- ============ HEADER ============ -->
+    <!-- Breakpoint switch hamburger<->nav-lengkap SENGAJA di xl: (1280px),
+         BUKAN lg: (1024px) — 1024px persis kena lebar iPad landscape
+         (iPad Mini/biasa: 1024px, iPad Pro 11": 1194px), jadi kalau
+         switch-nya di lg:, nav-lengkap (5 menu + user chip + logout)
+         maksa muncul padahal lebarnya belum cukup lega, hasilnya
+         kegencet/numpuk. Digeser ke xl: biar iPad (termasuk landscape)
+         tetap dapet mode hamburger yang udah lega, nav-lengkap cuma
+         muncul di layar yang beneran cukup luas. -->
     <header class="bg-white sticky top-0 z-30 border-b border-line">
         <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-                <button onclick="openSidebar()" class="lg:hidden p-2 -ml-2 rounded-[8px] hover:bg-bg transition-colors" aria-label="Buka menu">
+                <button onclick="openSidebar()" class="xl:hidden p-2 -ml-2 rounded-[8px] hover:bg-bg transition-colors" aria-label="Buka menu">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#14213D" stroke-width="2" stroke-linecap="round">
                         <line x1="3" y1="6" x2="21" y2="6"/>
                         <line x1="3" y1="12" x2="21" y2="12"/>
@@ -41,7 +49,7 @@
                 </a>
             </div>
 
-            <div class="hidden lg:flex items-center gap-5">
+            <div class="hidden xl:flex items-center gap-5">
                 <nav class="flex items-center gap-1">
                     {% if user.is_authenticated %}
                     <a href="{% url 'dashboard' %}" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
@@ -141,9 +149,9 @@
     </header>
 
     <!-- ============ MOBILE SIDEBAR ============ -->
-    <div id="sidebarOverlay" onclick="closeSidebar()" class="fixed inset-0 bg-black/40 z-40 opacity-0 pointer-events-none transition-opacity duration-200 lg:hidden"></div>
+    <div id="sidebarOverlay" onclick="closeSidebar()" class="fixed inset-0 bg-black/40 z-40 opacity-0 pointer-events-none transition-opacity duration-200 xl:hidden"></div>
 
-    <aside id="mobileSidebar" class="fixed top-0 left-0 h-full w-[290px] bg-white z-50 shadow-xl -translate-x-full transition-transform duration-200 lg:hidden flex flex-col">
+    <aside id="mobileSidebar" class="fixed top-0 left-0 h-full w-[290px] bg-white z-50 shadow-xl -translate-x-full transition-transform duration-200 xl:hidden flex flex-col">
         <div class="flex items-center justify-between px-5 py-5 border-b border-line">
             <a href="{% url 'dashboard' %}" class="flex items-center gap-3">
                 <div class="ihc-logo" style="height:40px;">

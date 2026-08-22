@@ -148,11 +148,11 @@
       <div class="flex flex-wrap justify-between items-start gap-3 mb-4">
         <h2 class="font-display text-[16px] font-semibold">💰 Biaya Maintenance per Bulan</h2>
       </div>
-      <form method="get" class="flex flex-wrap items-end gap-2 mb-4">
+      <form method="get" class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end mb-4">
         {% for k, v in cost_preserve_params %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
         <div><label class="text-[11px] text-muted block mb-1">{{ cost_filter.date_from.label }}</label>{{ cost_filter.date_from }}</div>
         <div><label class="text-[11px] text-muted block mb-1">{{ cost_filter.date_to.label }}</label>{{ cost_filter.date_to }}</div>
-        <button type="submit" class="px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
+        <button type="submit" class="w-full sm:w-auto px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
       </form>
       <canvas id="costChart" height="220"></canvas>
     </div>
@@ -168,22 +168,22 @@
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
     <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
       <h2 class="font-display text-[16px] font-semibold mb-4">🔧 Jenis Perawatan</h2>
-      <form method="get" class="flex flex-wrap items-end gap-2 mb-4">
+      <form method="get" class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end mb-4">
         {% for k, v in type_preserve_params %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
         <div><label class="text-[11px] text-muted block mb-1">{{ type_filter.date_from.label }}</label>{{ type_filter.date_from }}</div>
         <div><label class="text-[11px] text-muted block mb-1">{{ type_filter.date_to.label }}</label>{{ type_filter.date_to }}</div>
-        <button type="submit" class="px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
+        <button type="submit" class="w-full sm:w-auto px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
       </form>
       <canvas id="typeChart" height="200"></canvas>
     </div>
 
     <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
       <h2 class="font-display text-[16px] font-semibold mb-4">✅ Hasil Kerja</h2>
-      <form method="get" class="flex flex-wrap items-end gap-2 mb-4">
+      <form method="get" class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 items-end mb-4">
         {% for k, v in result_preserve_params %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
         <div><label class="text-[11px] text-muted block mb-1">{{ result_filter.date_from.label }}</label>{{ result_filter.date_from }}</div>
         <div><label class="text-[11px] text-muted block mb-1">{{ result_filter.date_to.label }}</label>{{ result_filter.date_to }}</div>
-        <button type="submit" class="px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
+        <button type="submit" class="w-full sm:w-auto px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
       </form>
       <canvas id="resultChart" height="200"></canvas>
     </div>
@@ -193,12 +193,12 @@
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
     <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
       <h2 class="font-display text-[16px] font-semibold mb-4">🔁 Barang Paling Sering Diservis</h2>
-      <form method="get" class="flex flex-wrap items-end gap-2 mb-4">
+      <form method="get" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end mb-4">
         {% for k, v in topeq_preserve_params %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
         <div><label class="text-[11px] text-muted block mb-1">{{ topeq_filter.date_from.label }}</label>{{ topeq_filter.date_from }}</div>
         <div><label class="text-[11px] text-muted block mb-1">{{ topeq_filter.date_to.label }}</label>{{ topeq_filter.date_to }}</div>
         <div><label class="text-[11px] text-muted block mb-1">{{ topeq_filter.limit.label }}</label>{{ topeq_filter.limit }}</div>
-        <button type="submit" class="px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
+        <button type="submit" class="w-full sm:w-auto px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
       </form>
       {% if top_serviced_equipment %}
         <ul class="divide-y divide-line">
@@ -219,12 +219,12 @@
 
     <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
       <h2 class="font-display text-[16px] font-semibold mb-4">👨‍🔧 Teknisi Paling Aktif</h2>
-      <form method="get" class="flex flex-wrap items-end gap-2 mb-4">
+      <form method="get" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_auto] gap-2 items-end mb-4">
         {% for k, v in toptech_preserve_params %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
         <div><label class="text-[11px] text-muted block mb-1">{{ toptech_filter.date_from.label }}</label>{{ toptech_filter.date_from }}</div>
         <div><label class="text-[11px] text-muted block mb-1">{{ toptech_filter.date_to.label }}</label>{{ toptech_filter.date_to }}</div>
         <div><label class="text-[11px] text-muted block mb-1">{{ toptech_filter.limit.label }}</label>{{ toptech_filter.limit }}</div>
-        <button type="submit" class="px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
+        <button type="submit" class="w-full sm:w-auto px-3 py-2 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Filter</button>
       </form>
       {% if top_technicians %}
         <ul class="divide-y divide-line">

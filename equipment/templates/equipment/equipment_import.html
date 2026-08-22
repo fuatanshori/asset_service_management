@@ -12,7 +12,7 @@
     <h2 class="font-display text-[15px] font-semibold mb-2">Format Kolom yang Dibaca</h2>
     <p class="text-[13px] text-muted mb-3">Baris pertama dianggap header (dilewati). Urutan kolom dari kiri ke kanan, persis sesuai file kamu:</p>
     <ol class="text-[13px] font-mono bg-bg rounded-[10px] p-3 space-y-1">
-      <li>serial_number <span class="text-muted">(boleh kosong, tapi kalau diisi harus unik)</span></li>
+      <li>serial_number <span class="text-muted">(boleh kosong, dan boleh sama dengan barang lain — nomor seri sengaja nggak dibuat unik)</span></li>
       <li>name <span class="text-red">*wajib</span></li>
       <li>brand</li>
       <li>model_type</li>
@@ -28,7 +28,8 @@
     </ol>
     <p class="text-[12px] text-muted mt-3">
       Status dibaca dari kolom <strong>status</strong> di Excel (nilai lain/kosong otomatis jadi <strong>Aktif</strong>).
-      Baris yang field wajibnya kosong, tahunnya bukan angka, atau nomor serinya udah kepakai akan dilewati (nggak bikin gagal keseluruhan import).
+      Baris yang Nama Barang-nya kosong akan dilewati (nggak bikin gagal keseluruhan import) — nomor seri boleh
+      kosong atau duplikat, jadi bukan alasan baris dilewati.
     </p>
   </div>
 

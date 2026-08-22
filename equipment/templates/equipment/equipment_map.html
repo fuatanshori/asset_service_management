@@ -8,6 +8,12 @@
 <link rel="stylesheet" href="{% static 'assets/vendor/leaflet.markercluster/MarkerCluster.css' %}">
 <link rel="stylesheet" href="{% static 'assets/vendor/leaflet.markercluster/MarkerCluster.Default.css' %}">
 <script src="{% static 'assets/vendor/leaflet.markercluster/leaflet.markercluster.js' %}"></script>
+<style>
+  /* Sama seperti equipment_detail.html — Leaflet punya z-index internal
+     sampai 1000, tanpa ini peta bisa nimpa header sticky (z-30) pas
+     discroll, terutama kelihatan di HP. */
+  .leaflet-container { z-index: 0; }
+</style>
 {% endblock %}
 {% block content %}
 

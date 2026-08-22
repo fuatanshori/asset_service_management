@@ -83,7 +83,7 @@
       <ul class="divide-y divide-line">
         {% for item in stale_equipment %}
         <li class="py-2 flex flex-wrap items-center justify-between gap-2 text-[13.5px]">
-          <a href="{% url 'equipment_detail' item.pk %}" class="hover:text-brand break-words">{{ item.name }} <span class="text-muted">({{ item.serial_number }})</span></a>
+          <a href="{% url 'equipment_detail' item.pk %}" class="hover:text-brand break-words">{{ item.name }} <span class="text-muted">({{ item.serial_number|default:"—" }})</span></a>
           <span class="badge badge-{{ item.status_color }} flex-shrink-0">{{ item.get_status_display }}</span>
         </li>
         {% endfor %}
@@ -226,12 +226,11 @@
 
   <!-- E. Lampiran Data Mentah -->
   <div id="lampiran" class="bg-white border border-line rounded-xl2 p-5 sm:p-6 scroll-mt-24">
-    <h2 class="font-display text-[16px] font-semibold mb-3">📄 Lampiran Data Mentah</h2>
-    <p class="text-[13.5px] text-muted mb-4">Butuh data lengkap per baris? Download langsung, atau buka <a href="{% url 'equipment_list' %}" class="text-brand hover:underline">Data Barang</a> buat lihat/filter satu-satu.</p>
+    <h2 class="font-display text-[16px] font-semibold mb-3">📄 Lampiran</h2>
+    <p class="text-[13.5px] text-muted mb-4">
+      Butuh export Data Barang atau Jadwal &amp; Riwayat satuan? Halaman <a href="{% url 'equipment_list' %}" class="text-brand hover:underline">Data Barang</a> dan <a href="{% url 'schedule_list' %}" class="text-brand hover:underline">Jadwal Maintenance</a> masing-masing punya tombol export sendiri. Di sini cuma 2 pilihan: arsip lengkap, atau ringkasan buat presentasi.
+    </p>
     <div class="flex flex-wrap gap-2.5">
-      <a href="{% url 'equipment_export' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬇️ Data Barang (Excel)</a>
-      <a href="{% url 'report_export_equipment_summary' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">📊 Ringkasan Barang, Digabung (Excel)</a>
-      <a href="{% url 'schedule_export' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬇️ Jadwal &amp; Riwayat (Excel)</a>
       <a href="{% url 'report_export_full' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">⬇️ Semua Sekaligus (Excel Multi-Sheet)</a>
       <a href="{% url 'report_export_pdf' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">📄 Export PDF (Presentasi)</a>
     </div>
