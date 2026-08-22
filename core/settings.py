@@ -26,10 +26,7 @@ def env_bool(name, default=False):
     return value.strip().lower() in ("1", "true", "yes", "on")
 
 
-# DEBUG dikontrol lewat environment variable DJANGO_DEBUG, BUKAN
-# di-hardcode di file ini — biar nggak ada risiko lupa flip balik pas
-# mau deploy. Default-nya False (aman) kalau env var nggak di-set;
-# nyalain mode dev cuma lewat `export DJANGO_DEBUG=True` di lokal.
+
 DEBUG = env_bool("DJANGO_DEBUG", default=False)
 DEBUG =True
 # SECURITY WARNING: keep the secret key used in production secret!
@@ -45,18 +42,14 @@ if not SECRET_KEY:
         raise RuntimeError(
             "DJANGO_SECRET_KEY wajib di-set lewat environment variable kalau DEBUG=False."
         )
-
+        
 # Baca dari env var (comma-separated) biar fleksibel antar staging/
 # production tanpa perlu edit kode — sengaja TANPA wildcard "*" secara
 # default, itu bahaya di jaringan publik. Kalau deploy-nya ke IP privat
 # di jaringan tertutup, isi DJANGO_ALLOWED_HOSTS dengan IP tersebut (atau
 # "*" kalau jaringannya beneran cuma bisa diakses internal/terpercaya).
 ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.environ.get(
-        "DJANGO_ALLOWED_HOSTS", "project.fuatanshori.com,localhost,127.0.0.1,192.168.0.156"
-    ).split(",")
-    if h.strip()
+    "*"
 ]
 
 CSRF_TRUSTED_ORIGINS = [
@@ -79,12 +72,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
     'accounts',
     'equipment',
     'maintenance',
     'dashboard',
     'reports',
-    "django_extensions",
 ]
 
 MIDDLEWARE = [

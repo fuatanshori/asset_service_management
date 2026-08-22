@@ -1,23 +1,27 @@
 # reports/views.py
+import json
 from collections import OrderedDict
 
 from django.contrib.auth.decorators import login_required
-from django.http import HttpResponse
+from django.db.models import Avg, Count, Sum
+from django.db.models.functions import TruncMonth
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
 from openpyxl import Workbook
 
-from equipment.analytics import get_equipment_status_breakdown
+from equipment.analytics import get_equipment_age_analysis, get_equipment_status_breakdown
 from equipment.models import Equipment
 from equipment.views import EQUIPMENT_EXPORT_HEADERS, equipment_export_row
 from maintenance.analytics import (
     get_cost_by_equipment,
+    get_cost_by_month_multi_year,
     get_cost_summary,
     get_cost_trend,
     get_month_over_month_cost,
     get_stale_equipment,
 )
-from maintenance.models import MaintenanceSchedule
+from maintenance.models import MaintenanceLog, MaintenanceSchedule
 from maintenance.views import SCHEDULE_EXPORT_HEADERS, schedule_export_row
 from .forms import ReportFilterForm
 
@@ -30,6 +34,9 @@ def report_view(request):
     date_to = filter_form.cleaned_data.get("date_to")
 
     cost_trend = get_cost_trend(date_from=date_from, date_to=date_to)
+    cost_by_month_multi_year = get_cost_by_month_multi_year()
+    available_cost_years = sorted(cost_by_month_multi_year.keys(), reverse=True)
+    age_analysis = get_equipment_age_analysis()
 
     context = {
         "active_page": "report",
@@ -38,13 +45,84 @@ def report_view(request):
         "generated_at": timezone.localtime(),
         "total_equipment": Equipment.objects.count(),
         "status_breakdown": get_equipment_status_breakdown(),
+        "age_analysis": age_analysis,
+        "age_buckets_json": json.dumps(age_analysis["buckets"]),
         "cost_summary": get_cost_summary(),
+        "cost_summary_count": MaintenanceLog.objects.exclude(completed_date__isnull=True).count(),
         "cost_mom": get_month_over_month_cost(),
         "cost_trend": list(zip(cost_trend["labels"], cost_trend["values"])),
+        # Data mentah (bukan hasil zip) buat dikonsumsi Chart.js —
+        # nggak bisa pakai "cost_trend" yang udah di-zip di atas, soalnya
+        # Chart.js butuh array label & array angka yang terpisah.
+        "cost_trend_labels_json": json.dumps(cost_trend["labels"]),
+        "cost_trend_values_json": json.dumps(cost_trend["values"]),
         "cost_by_equipment": get_cost_by_equipment(date_from=date_from, date_to=date_to, limit=10),
         "stale_equipment": get_stale_equipment(months_threshold=6, limit=10),
+        # Fitur "Cek Biaya per Tahun & Bulan" — SEMUA tahun yang punya
+        # data dikirim sekaligus di sini, biar ganti tahun/bulan di
+        # halaman Laporan murni JS, nggak reload sama sekali.
+        "available_cost_years": available_cost_years,
+        "default_cost_year": available_cost_years[0] if available_cost_years else timezone.localtime().year,
+        "cost_by_month_multi_year_json": json.dumps(cost_by_month_multi_year),
     }
     return render(request, "reports/report.html", context)
+
+
+@login_required
+def report_cost_analysis_ajax(request):
+    """Endpoint JSON buat filter tanggal di section "Analisis Biaya" —
+    dipanggil lewat fetch() dari JS, BUKAN navigasi/reload halaman
+    biasa. Ngembaliin ringkasan (total/jumlah servis/rata-rata), chart
+    Tren Biaya, DAN tabel Barang Paling Boros — semuanya dihitung dari
+    queryset dasar yang sama, biar konsisten satu sama lain.
+
+    SENGAJA cuma dengerin date_from/date_to (filter form biasa) — fitur
+    "Cek Biaya per Tahun & Bulan" itu widget yang berdiri sendiri,
+    nggak nyentuh endpoint ini sama sekali."""
+    filter_form = ReportFilterForm(request.GET)
+    filter_form.is_valid()
+    date_from = filter_form.cleaned_data.get("date_from")
+    date_to = filter_form.cleaned_data.get("date_to")
+
+    logs_qs = MaintenanceLog.objects.exclude(completed_date__isnull=True)
+    if date_from:
+        logs_qs = logs_qs.filter(completed_date__gte=date_from)
+    if date_to:
+        logs_qs = logs_qs.filter(completed_date__lte=date_to)
+
+    summary_agg = logs_qs.aggregate(total=Sum("cost"), avg=Avg("cost"), count=Count("id"))
+
+    cost_trend_rows = list(
+        logs_qs.annotate(month=TruncMonth("completed_date"))
+        .values("month")
+        .annotate(total_cost=Sum("cost"))
+        .order_by("month")
+    )
+
+    cost_by_equipment_rows = (
+        logs_qs.values("schedule__equipment__id", "schedule__equipment__name", "schedule__equipment__serial_number")
+        .annotate(total_cost=Sum("cost"), service_count=Count("id"))
+        .order_by("-total_cost")[:10]
+    )
+
+    return JsonResponse({
+        "summary": {
+            "total": float(summary_agg["total"] or 0),
+            "avg_per_service": float(summary_agg["avg"] or 0),
+            "service_count": summary_agg["count"] or 0,
+        },
+        "cost_trend_labels": [r["month"].strftime("%b %Y") for r in cost_trend_rows],
+        "cost_trend_values": [float(r["total_cost"] or 0) for r in cost_trend_rows],
+        "cost_by_equipment": [
+            {
+                "name": row["schedule__equipment__name"],
+                "serial_number": row["schedule__equipment__serial_number"] or "",
+                "service_count": row["service_count"],
+                "total_cost": float(row["total_cost"] or 0),
+            }
+            for row in cost_by_equipment_rows
+        ],
+    })
 
 
 @login_required

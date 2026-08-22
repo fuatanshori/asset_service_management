@@ -18,13 +18,10 @@ class Equipment(models.Model):
         (STATUS_DAMAGED, "Rusak"),
     ]
 
-    # unique=True + null=True (bukan cuma blank=True) SENGAJA dipasang
-    # bareng — biar banyak barang boleh sama-sama nggak punya nomor seri
-    # (misal data lama dari Excel yang datanya nggak lengkap) tanpa
-    # nabrak constraint unique. Di SQL, banyak baris boleh sama-sama
-    # NULL tanpa dianggap "sama"; beda kalau dikasih string kosong ""
-    # (itu tetap dianggap 1 nilai yang harus unik, jadi cuma 1 barang
-    # yang bisa punya serial number kosong kalau nggak pakai null=True).
+    # Sengaja TIDAK unique=True (keputusan sadar) — nomor seri boleh
+    # duplikat antar barang beda (baik lewat form Tambah/Edit manual
+    # maupun Import Excel, keduanya konsisten). null=True + blank=True
+    # cuma buat ngizinin nomor seri kosong.
     serial_number = models.CharField("Nomor Seri", max_length=100, null=True, blank=True)
     name = models.CharField("Nama Barang", max_length=150)
     brand = models.CharField("Merk", max_length=100, blank=True)

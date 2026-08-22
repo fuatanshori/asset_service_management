@@ -73,9 +73,10 @@ def _parse_import_row(row_num, row):
 
     name wajib. brand, serial_number, & acquisition_year BOLEH kosong
     (data lama sering nggak lengkap) — serial_number kosong disimpan
-    sebagai None (bukan string kosong), biar banyak barang boleh
-    sama-sama nggak punya nomor seri tanpa nabrak constraint unique di
-    model (lihat catatan di Equipment.serial_number).
+    sebagai None (bukan string kosong). serial_number SENGAJA nggak
+    dicek duplikat di sini — nomor seri boleh sama antar barang beda,
+    konsisten sama form Tambah/Edit manual yang juga nggak ngecek
+    duplikat (lihat catatan di Equipment.serial_number, models.py).
 
     status dibaca dari Excel (active/aktif -> Aktif, damaged/rusak ->
     Rusak) — nilai lain atau kosong default ke Aktif. Ini AMAN dipasang
@@ -113,11 +114,8 @@ def _parse_import_row(row_num, row):
             except (TypeError, ValueError):
                 acquisition_year = None  # beneran bukan angka — dikosongin, bukan nolak baris
 
-    if serial_number:
-        if Equipment.objects.filter(serial_number=serial_number).exists():
-            return None, f"Baris {row_num}: Nomor Seri '{serial_number}' sudah terdaftar — dilewati."
-    else:
-        serial_number = None  # None (bukan ""), biar aman di kolom unique=True
+    if not serial_number:
+        serial_number = None  # None (bukan ""), konsisten sama representasi "kosong" di database
 
     status_key = str(status_raw).strip().lower() if status_raw not in (None, "") else ""
     status = STATUS_IMPORT_MAP.get(status_key, Equipment.STATUS_ACTIVE)
@@ -281,10 +279,9 @@ def equipment_import(request):
     Dibuat/Diubah Pada = waktu import (otomatis dari auto_now_add /
     auto_now di model, nggak perlu — dan nggak bisa — diisi manual).
 
-    Baris yang error (field wajib kosong, tahun nggak valid, nomor seri
-    udah kepakai) dilewati satu-satu, bukan bikin seluruh import gagal —
-    daftar barang yang berhasil & baris yang dilewati sama-sama
-    ditampilin di akhir."""
+    Baris yang error (Nama Barang kosong) dilewati satu-satu, bukan
+    bikin seluruh import gagal — daftar barang yang berhasil & baris
+    yang dilewati sama-sama ditampilin di akhir."""
     results = None
     if request.method == "POST":
         form = EquipmentImportForm(request.POST, request.FILES)

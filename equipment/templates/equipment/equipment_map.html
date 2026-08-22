@@ -1,19 +1,13 @@
 {# equipment/templates/equipment/equipment_map.html #}
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Peta Barang{% endblock %}
 {% block extra_head %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-  /* Leaflet punya z-index internal sampai 1000 (tile, kontrol zoom, dst) —
-     tanpa ini, elemen peta bisa nimpa header sticky (z-30) pas discroll,
-     terutama kelihatan di HP. z-index di sini bikin stacking context
-     sendiri buat peta, jadi elemen di dalamnya "terkurung". */
-  .leaflet-container { z-index: 0; }
-</style>
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <link rel="stylesheet" href="{% static 'assets/vendor/leaflet/dist/leaflet.css' %}">
+    <script src="{% static 'assets/vendor/leaflet/dist/leaflet.js' %}"></script>   
+<link rel="stylesheet" href="{% static 'assets/vendor/leaflet.markercluster/MarkerCluster.css' %}">
+<link rel="stylesheet" href="{% static 'assets/vendor/leaflet.markercluster/MarkerCluster.Default.css' %}">
+<script src="{% static 'assets/vendor/leaflet.markercluster/leaflet.markercluster.js' %}"></script>
 {% endblock %}
 {% block content %}
 

@@ -1,17 +1,18 @@
 {# equipment/templates/equipment/equipment_detail.html #}
 {% extends "base.html" %}
+{% load static %}
 {% block title %}{{ equipment.name }}{% endblock %}
 {% block extra_head %}
 {% if equipment.has_location %}
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-  /* Leaflet punya z-index internal sampai 1000 (tile, kontrol zoom, dst) —
-     tanpa ini, elemen peta bisa nimpa header sticky (z-30) pas discroll,
-     terutama kelihatan di HP. z-index di sini bikin stacking context
-     sendiri buat peta, jadi elemen di dalamnya "terkurung". */
-  .leaflet-container { z-index: 0; }
-</style>
+    <link rel="stylesheet" href="{% static 'assets/vendor/leaflet/dist/leaflet.css' %}">
+    <script src="{% static 'assets/vendor/leaflet/dist/leaflet.js' %}"></script>
+    <style>
+      /* Leaflet punya z-index internal sampai 1000 (tile, kontrol zoom, dst) —
+         tanpa ini, elemen peta bisa nimpa header sticky (z-30) pas discroll,
+         terutama kelihatan di HP. z-index di sini bikin stacking context
+         sendiri buat peta, jadi elemen di dalamnya "terkurung". */
+      .leaflet-container { z-index: 0; }
+    </style>
 {% endif %}
 {% endblock %}
 {% block content %}
@@ -67,7 +68,12 @@
   {% if equipment.has_location %}
   <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
     <h2 class="font-display text-[16px] font-semibold mb-3">📍 Titik Lokasi</h2>
-    <div id="detailMap" class="w-full h-56 rounded-[10px] border border-line"></div>
+    <button type="button" onclick="openMapLightbox()" class="relative w-full h-56 rounded-[10px] border border-line overflow-hidden block group cursor-zoom-in p-0">
+      <div id="detailMap" class="w-full h-full"></div>
+      <span class="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center pointer-events-none">
+        <span class="opacity-0 group-hover:opacity-100 transition-opacity text-white text-[11px] font-semibold bg-black/50 px-2.5 py-1 rounded-full">🔍 Perbesar</span>
+      </span>
+    </button>
   </div>
   {% endif %}
 
@@ -134,10 +140,10 @@
                 <div class="flex gap-2 flex-wrap">
                   <a href="{% url 'log_detail' s.log.pk %}?next={{ request.get_full_path|urlencode }}&from=equipment" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-emerald-700 hover:opacity-90">Detail Riwayat</a>
                   {% if user.is_authenticated %}
-                  <a href="{% url 'schedule_edit' s.pk %}?next={{ request.get_full_path|urlencode }}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-amber hover:opacity-90">Edit Jadwal</a>
                   {% if s.log %}
                   <a href="{% url 'log_edit' s.log.pk %}?next={{ request.get_full_path|urlencode }}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-brand hover:opacity-90">Edit Riwayat</a>
                   {% endif %}
+                  <a href="{% url 'schedule_edit' s.pk %}?next={{ request.get_full_path|urlencode }}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-amber hover:opacity-90">Edit Jadwal</a>
                   <a href="{% url 'schedule_delete' s.pk %}?next={{ request.get_full_path|urlencode }}" class="px-2.5 py-1 rounded-[6px] text-[11.5px] font-semibold text-white bg-red hover:opacity-90">Hapus</a>
                   {% endif %}
                 </div>
@@ -169,14 +175,68 @@
   {% endif %}
 
   {% if equipment.has_location %}
+  <div id="mapLightbox" onclick="closeMapLightbox()"
+       class="hidden fixed inset-0 bg-black/80 z-[9999] items-center justify-center p-4 cursor-zoom-out">
+    <button type="button" onclick="closeMapLightbox()"
+      class="absolute top-4 right-4 sm:top-6 sm:right-6 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xl transition-colors">
+      ✕
+    </button>
+    <div id="detailMapLarge" onclick="event.stopPropagation()" class="w-[92vw] h-[80vh] max-w-4xl rounded-[10px] overflow-hidden cursor-default"></div>
+  </div>
+  {% endif %}
+
+  {% if equipment.has_location %}
   <script>
-    const detailMap = L.map('detailMap', { zoomControl: true, dragging: true, scrollWheelZoom: false })
-      .setView([{{ equipment.latitude }}, {{ equipment.longitude }}], 17);
+    const detailMap = L.map('detailMap', {
+      zoomControl: false, dragging: false, scrollWheelZoom: false,
+      doubleClickZoom: false, touchZoom: false, boxZoom: false, keyboard: false,
+    }).setView([{{ equipment.latitude }}, {{ equipment.longitude }}], 17);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19,
     }).addTo(detailMap);
     L.marker([{{ equipment.latitude }}, {{ equipment.longitude }}]).addTo(detailMap);
+
+    // Peta besar dibikin sekali doang pas pertama kali lightbox dibuka
+    // (lazy init) — bukan langsung pas halaman dimuat, soalnya
+    // kontainernya masih hidden (display:none) dan Leaflet nggak bisa
+    // ngitung ukuran kontainer yang belum keliatan.
+    let detailMapLarge = null;
+
+    function openMapLightbox() {
+      const lightbox = document.getElementById('mapLightbox');
+      lightbox.classList.remove('hidden');
+      lightbox.classList.add('flex');
+      document.body.style.overflow = 'hidden';
+
+      // Tunda PEMBUATAN peta-nya sendiri (bukan cuma invalidateSize)
+      // sampai kontainernya beneran keliatan & browser udah selesai
+      // ngitung ukurannya. Kalau L.map() dipanggil langsung pas
+      // classList baru aja diubah dari hidden, Leaflet bisa salah baca
+      // ukuran kontainer jadi 0 — hasilnya peta blank/hitam meski
+      // invalidateSize dipanggil belakangan.
+      setTimeout(() => {
+        if (!detailMapLarge) {
+          detailMapLarge = L.map('detailMapLarge', { zoomControl: true, dragging: true, scrollWheelZoom: true })
+            .setView([{{ equipment.latitude }}, {{ equipment.longitude }}], 17);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19,
+          }).addTo(detailMapLarge);
+          L.marker([{{ equipment.latitude }}, {{ equipment.longitude }}]).addTo(detailMapLarge);
+        } else {
+          detailMapLarge.invalidateSize();
+          detailMapLarge.setView([{{ equipment.latitude }}, {{ equipment.longitude }}], 17);
+        }
+      }, 100);
+    }
+
+    function closeMapLightbox() {
+      const lightbox = document.getElementById('mapLightbox');
+      lightbox.classList.add('hidden');
+      lightbox.classList.remove('flex');
+      document.body.style.overflow = '';
+    }
   </script>
   {% endif %}
 
@@ -194,10 +254,23 @@
       lightbox.classList.remove('flex');
       document.body.style.overflow = '';
     }
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closePhotoLightbox();
-    });
   </script>
   {% endif %}
+
+  <script>
+    // Tombol Escape nutup lightbox mana pun yang lagi kebuka (foto
+    // dan/atau peta) — dicek generik lewat selector id yang berakhiran
+    // "Lightbox", biar nggak perlu handler terpisah per lightbox.
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      document.querySelectorAll('[id$="Lightbox"]').forEach((lightbox) => {
+        if (!lightbox.classList.contains('hidden')) {
+          lightbox.classList.add('hidden');
+          lightbox.classList.remove('flex');
+        }
+      });
+      document.body.style.overflow = '';
+    });
+  </script>
 
 {% endblock %}

@@ -12,6 +12,10 @@
     <link rel="stylesheet" href="{% static 'assets/css/styles.css' %}">
     <link rel="stylesheet" href="{% static 'assets/css/output.css' %}">
 
+    <!-- Leaflet (dipakai di halaman-halaman yang menampilkan peta lokasi barang).
+         Ditaruh di sini (bukan per-halaman) supaya cukup dikelola sekali,
+         dan supaya file JS-nya sudah pasti kebaca (variabel `L`) sebelum
+         script inline di block content yang bikin peta dijalankan. --> 
     {% block extra_head %}{% endblock %}
 </head>
 
@@ -33,7 +37,7 @@
                     <div class="ihc-logo">
                         <img src="{% static 'assets/img/ihc.png' %}" alt="Logo IHC">
                     </div>
-                    
+
                 </a>
             </div>
 

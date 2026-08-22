@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import render
 import json
-from equipment.analytics import get_equipment_status_breakdown
+from equipment.analytics import get_data_completeness, get_equipment_status_breakdown
 from equipment.models import Equipment
 from maintenance.analytics import (
     get_cost_by_month,
@@ -72,6 +72,7 @@ def dashboard(request):
         "equipment_under_repair": status_breakdown["under_repair"],
         "equipment_damaged": status_breakdown["damaged"],
         "cost_summary": get_cost_summary(),
+        "data_completeness": get_data_completeness(),
         "upcoming_schedules": (
             MaintenanceSchedule.objects.select_related("equipment", "log")
             .filter(log__result__in=[MaintenanceLog.RESULT_PENDING, MaintenanceLog.RESULT_IN_PROGRESS])
@@ -102,6 +103,7 @@ def dashboard(request):
         "type_values_json": json.dumps([r["total"] for r in type_breakdown]),
         "result_labels_json": json.dumps([r["label"] for r in result_breakdown]),
         "result_values_json": json.dumps([r["total"] for r in result_breakdown]),
+        "result_colors_json": json.dumps([r["color"] for r in result_breakdown]),
 
         "top_serviced_equipment": top_serviced_equipment,
         "top_technicians": top_technicians,

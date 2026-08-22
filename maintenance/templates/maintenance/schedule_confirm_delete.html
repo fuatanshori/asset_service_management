@@ -7,18 +7,18 @@
     <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-[#F8E2E0] text-red flex items-center justify-center text-xl">!</div>
     <h1 class="font-display text-[18px] font-semibold mb-2">Hapus jadwal ini?</h1>
     <p class="text-[13.5px] text-muted mb-6">
-      Jadwal maintenance "{{ schedule.equipment.name }}" pada {{ schedule.scheduled_date|date:"d-m-Y" }} akan dihapus permanen.
+      Jadwal dan riwayat maintenance untuk "{{ schedule.equipment.name }}" tanggal {{ schedule.scheduled_date|date:"d-m-Y" }} akan dihapus secara permanen.
     </p>
 
     <form method="post">
       {% csrf_token %}
       {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
 
+      {% if is_latest_schedule %}
       <div class="mb-6 pb-6 border-b border-line text-left">
-        <label class="field-label mb-2 block">Status Barang Setelah Jadwal Ini Dihapus</label>
         <p class="text-[12px] text-muted mb-3">
-          Status saat ini: <span class="badge badge-{{ schedule.equipment.status_color }}">{{ schedule.equipment.get_status_display }}</span>.
-          Kalau ini jadwal terakhir barang ini, status normalnya otomatis balik ke Aktif — pilih Rusak di bawah kalau barangnya sebenarnya masih belum bisa dipakai.
+          Status barang saat ini: <span class="badge badge-{{ schedule.equipment.status_color }}">{{ schedule.equipment.get_status_display }}</span>.
+          Kalau barangnya masih rusak, pilih Rusak di bawah ini.
         </p>
         <div class="flex gap-5 justify-center">
           <label class="flex items-center gap-2 text-[13.5px] cursor-pointer">
@@ -31,6 +31,15 @@
           </label>
         </div>
       </div>
+      {% else %}
+      <div class="mb-6 pb-6 border-b border-line text-left">
+        <p class="text-[12px] text-muted">
+          Barang ini masih punya jadwal lain yang lebih baru, jadi status barangnya
+          (<span class="badge badge-{{ schedule.equipment.status_color }}">{{ schedule.equipment.get_status_display }}</span>)
+          tetap mengikuti jadwal itu dan tidak akan berubah meski jadwal ini dihapus.
+        </p>
+      </div>
+      {% endif %}
 
       <div class="flex justify-center gap-2.5">
         <button type="submit" class="px-5 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-red hover:opacity-90 transition-colors">Ya, Hapus</button>

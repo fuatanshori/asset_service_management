@@ -1,9 +1,9 @@
 {# maintenance/templates/maintenance/schedule_calendar.html #}
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Kalender Maintenance{% endblock %}
 {% block extra_head %}
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="{% static 'assets/vendor/fullcalendar/index.global.min.js' %}"></script>
 <style>
   .fc { font-family: 'Inter', sans-serif; font-size: 13px; }
   .fc-toolbar-title { font-family: 'Space Grotesk', sans-serif; font-size: 18px !important; }

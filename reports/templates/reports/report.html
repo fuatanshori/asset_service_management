@@ -1,12 +1,21 @@
 {# reports/templates/reports/report.html #}
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Laporan{% endblock %}
 {% block content %}
 
-  <p class="text-[12.5px] text-muted mb-6">Digenerate pada {{ generated_at|date:"d-m-Y H:i" }}</p>
+  <p class="text-[12.5px] text-muted mb-4">Digenerate pada {{ generated_at|date:"d-m-Y H:i" }}</p>
+
+  <div class="flex flex-wrap gap-2 mb-6">
+    <a href="#ringkasan" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">📌 Ringkasan</a>
+    <a href="#kesehatan-aset" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">📦 Kesehatan Aset</a>
+    <a href="#analisis-biaya" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">💰 Analisis Biaya</a>
+    <a href="#usia-barang" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">📅 Usia Barang</a>
+    <a href="#lampiran" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">📄 Lampiran</a>
+  </div>
 
   <!-- A. Ringkasan Eksekutif -->
-  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
+  <div id="ringkasan" class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5 scroll-mt-24">
     <h2 class="font-display text-[16px] font-semibold mb-4">📌 Ringkasan Eksekutif</h2>
 
     <p class="text-[14px] mb-5">
@@ -16,7 +25,7 @@
       <strong class="text-amber">{{ status_breakdown.under_repair }}</strong> Dalam Perbaikan,
       dan <strong class="text-red">{{ status_breakdown.damaged }}</strong> Rusak.
       {% if status_breakdown.damaged > 0 or status_breakdown.under_repair > 0 %}
-        <span class="text-red font-semibold">Perlu perhatian: {{ status_breakdown.damaged|add:status_breakdown.under_repair }} barang dalam kondisi tidak dapat digunakan/rusak</span>
+        <span class="text-red font-semibold">Perlu perhatian: {{ status_breakdown.damaged|add:status_breakdown.under_repair }} barang dalam kondisi tidak dapat digunakan</span>
       {% endif %}
       <br>
       Biaya maintenance bulan ini <strong>Rp{{ cost_mom.this_month|floatformat:0 }}</strong>
@@ -60,7 +69,7 @@
   </div>
 
   <!-- B. Kesehatan Aset -->
-  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
+  <div id="kesehatan-aset" class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5 scroll-mt-24">
     <h2 class="font-display text-[16px] font-semibold mb-4">📦 Kesehatan Aset</h2>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-5">
       <div><div class="text-[11px] text-muted">Aktif</div><div class="font-mono text-[18px] font-semibold text-green">{{ status_breakdown.active }}</div></div>
@@ -69,7 +78,7 @@
       <div><div class="text-[11px] text-muted">Rusak</div><div class="font-mono text-[18px] font-semibold text-red">{{ status_breakdown.damaged }}</div></div>
     </div>
 
-    <h3 class="text-[13px] font-semibold mb-2">⏳ Belum Diservis 6 Bulan Terakhir (atau Belum Pernah)</h3>
+    <h3 class="text-[13px] font-semibold mb-2">⏳ Belum Diservis 6 Bulan Terakhir (atau Belum Pernah){% if stale_equipment %} — {{ stale_equipment|length }} barang{% endif %}</h3>
     {% if stale_equipment %}
       <ul class="divide-y divide-line">
         {% for item in stale_equipment %}
@@ -85,64 +94,135 @@
   </div>
 
   <!-- C. Analisis Biaya -->
-  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5">
+  <div id="analisis-biaya" class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5 scroll-mt-24">
     <h2 class="font-display text-[16px] font-semibold mb-4">💰 Analisis Biaya</h2>
 
-    <form method="get" class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end mb-5">
+    <form id="costFilterForm" class="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-4 items-end mb-5">
       <div><label class="field-label">{{ filter_form.date_from.label }}</label>{{ filter_form.date_from }}</div>
       <div><label class="field-label">{{ filter_form.date_to.label }}</label>{{ filter_form.date_to }}</div>
       <div class="flex gap-2.5">
         <button type="submit" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">Terapkan</button>
-        {% if is_filtered %}<a href="{% url 'report' %}" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Reset</a>{% endif %}
+        <button type="button" id="costFilterResetBtn" class="px-4 py-2.5 rounded-[10px] text-[13px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">Reset</button>
       </div>
     </form>
-    <p class="text-[11px] text-muted mb-4">Filter berdasarkan tanggal kerjaan beneran selesai (bukan tanggal jadwal dibuat).</p>
+    <p class="text-[11px] text-muted mb-1">Filter berdasarkan tanggal kerjaan beneran selesai (bukan tanggal jadwal dibuat).</p>
+    <p id="costFilterLoadingMsg" class="text-[11px] text-brand mb-4 hidden">Memuat...</p>
 
+    <p class="text-[11px] text-muted mb-2">Angka di bawah ini ngikutin filter tanggal di atas (default: sepanjang waktu).</p>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
-      <div><div class="text-[11px] text-muted">Biaya Tahun Ini</div><div class="font-mono text-[18px] font-semibold">Rp{{ cost_summary.this_year|floatformat:0 }}</div></div>
-      <div><div class="text-[11px] text-muted">Total Sepanjang Waktu</div><div class="font-mono text-[18px] font-semibold">Rp{{ cost_summary.all_time|floatformat:0 }}</div></div>
-      <div><div class="text-[11px] text-muted">Rata-rata / Servis</div><div class="font-mono text-[18px] font-semibold">Rp{{ cost_summary.avg_per_service|floatformat:0 }}</div></div>
+      <div><div class="text-[11px] text-muted">Total Biaya</div><div id="summaryTotalValue" class="font-mono text-[18px] font-semibold">Rp{{ cost_summary.all_time|floatformat:0 }}</div></div>
+      <div><div class="text-[11px] text-muted">Jumlah Servis</div><div id="summaryCountValue" class="font-mono text-[18px] font-semibold">{{ cost_summary_count }}x</div></div>
+      <div><div class="text-[11px] text-muted">Rata-rata / Servis</div><div id="summaryAvgValue" class="font-mono text-[18px] font-semibold">Rp{{ cost_summary.avg_per_service|floatformat:0 }}</div></div>
     </div>
 
     <h3 class="text-[13px] font-semibold mb-2">Tren Biaya per Bulan</h3>
-    {% if cost_trend %}
-    <div class="overflow-x-auto mb-5">
-      <table class="w-full min-w-[320px] text-[13px] border-collapse">
-        <thead><tr class="border-b border-line"><th class="text-left py-2">Bulan</th><th class="text-right py-2">Total Biaya</th></tr></thead>
-        <tbody>
-          {% for label, value in cost_trend %}
-          <tr class="border-b border-line"><td class="py-1.5">{{ label }}</td><td class="py-1.5 text-right font-mono">Rp{{ value|floatformat:0 }}</td></tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <div id="costTrendWithData" class="{% if not cost_trend %}hidden{% endif %}">
+      <div class="mb-4">
+        <canvas id="costTrendChart" height="180"></canvas>
+      </div>
+      <div class="overflow-x-auto mb-5">
+        <table class="w-full min-w-[320px] text-[13px] border-collapse">
+          <thead><tr class="border-b border-line"><th class="text-left py-2">Bulan</th><th class="text-right py-2">Total Biaya</th></tr></thead>
+          <tbody id="costTrendTableBody">
+            {% for label, value in cost_trend %}
+            <tr class="border-b border-line"><td class="py-1.5">{{ label }}</td><td class="py-1.5 text-right font-mono">Rp{{ value|floatformat:0 }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-    {% else %}
-    <p class="text-[13px] text-muted mb-5">Belum ada riwayat yang selesai di rentang ini.</p>
-    {% endif %}
+    <p id="costTrendEmptyMsg" class="text-[13px] text-muted mb-5 {% if cost_trend %}hidden{% endif %}">Belum ada riwayat yang selesai di rentang ini.</p>
 
-    <h3 class="text-[13px] font-semibold mb-2">Barang Paling Boros Biaya Servis</h3>
-    {% if cost_by_equipment %}
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[480px] text-[13px] border-collapse">
-        <thead><tr class="border-b border-line"><th class="text-left py-2">Barang</th><th class="text-right py-2">Jumlah Servis</th><th class="text-right py-2">Total Biaya</th></tr></thead>
-        <tbody>
-          {% for row in cost_by_equipment %}
-          <tr class="border-b border-line">
-            <td class="py-1.5">{{ row.schedule__equipment__name }} <span class="text-muted">({{ row.schedule__equipment__serial_number }})</span></td>
-            <td class="py-1.5 text-right">{{ row.service_count }}x</td>
-            <td class="py-1.5 text-right font-mono">Rp{{ row.total_cost|floatformat:0 }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+    <h3 class="text-[14px] font-semibold mb-1">⭐ Cek Biaya per Tahun &amp; Bulan</h3>
+    <p class="text-[11px] text-muted mb-3">Klik tahun, lalu klik satu atau beberapa bulan buat lihat gabungannya — semua instan, nggak reload halaman.</p>
+
+    <div class="flex flex-wrap gap-1.5 mb-2" id="yearPicker">
+      {% for year in available_cost_years %}
+      <button type="button" class="year-btn px-3.5 py-1.5 rounded-[8px] text-[12.5px] font-semibold border border-line bg-white hover:border-brand transition-colors" data-year="{{ year }}">{{ year }}</button>
+      {% endfor %}
     </div>
+    <div class="flex flex-wrap gap-1.5 mb-3" id="monthPicker"></div>
+
+    <div class="flex flex-wrap gap-4 mb-3">
+      <p id="yearTotalLabel" class="text-[13.5px] font-semibold"></p>
+      <p id="yearHighestLabel" class="text-[13.5px] text-muted"></p>
+    </div>
+    <p id="monthPickerResult" class="text-[13.5px] mb-4 text-brand"></p>
+
+    <div class="mb-5">
+      <canvas id="thisYearCostChart" height="180"></canvas>
+    </div>
+
+    <h3 class="text-[13px] font-semibold mb-2">Barang Paling Boros Biaya Servis <span id="borosContextLabel" class="text-[11px] font-normal text-muted"></span></h3>
+    <div id="costByEquipmentWithData" class="{% if not cost_by_equipment %}hidden{% endif %}">
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[520px] text-[13px] border-collapse">
+          <thead><tr class="border-b border-line"><th class="text-left py-2 w-8">#</th><th class="text-left py-2">Barang</th><th class="text-right py-2">Jumlah Servis</th><th class="text-right py-2">Total Biaya</th></tr></thead>
+          <tbody id="costByEquipmentBody">
+            {% for row in cost_by_equipment %}
+            <tr class="border-b border-line {% if forloop.first %}bg-[#F8E2E0]/40{% endif %}">
+              <td class="py-1.5 text-muted">{{ forloop.counter }}</td>
+              <td class="py-1.5">{{ row.schedule__equipment__name }} <span class="text-muted">({{ row.schedule__equipment__serial_number }})</span></td>
+              <td class="py-1.5 text-right">{{ row.service_count }}x</td>
+              <td class="py-1.5 text-right font-mono">Rp{{ row.total_cost|floatformat:0 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p id="costByEquipmentEmptyMsg" class="text-[13px] text-muted {% if cost_by_equipment %}hidden{% endif %}">Belum ada data biaya di rentang ini.</p>
+  </div>
+
+  <!-- D. Analisis Usia Barang -->
+  <div id="usia-barang" class="bg-white border border-line rounded-xl2 p-5 sm:p-6 mb-5 scroll-mt-24">
+    <h2 class="font-display text-[16px] font-semibold mb-4">📅 Analisis Usia Barang</h2>
+
+    {% if age_analysis.with_year_count > 0 %}
+    <p class="text-[13px] text-muted mb-4">
+      Dari <strong>{{ age_analysis.with_year_count }}</strong> barang yang punya data tahun perolehan, rata-rata umurnya <strong>{{ age_analysis.avg_age }} tahun</strong>.
+      {% if age_analysis.without_year_count > 0 %}
+      <span class="text-amber">{{ age_analysis.without_year_count }} barang lain</span> belum ada data tahun perolehannya, jadi nggak diikutkan di analisis ini.
+      {% endif %}
+    </p>
+
+    <p class="text-[11px] text-muted mb-2">Klik salah satu kotak buat lihat daftar barangnya.</p>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-3">
+      {% for bucket in age_analysis.buckets %}
+      <button type="button" class="age-bucket-btn text-center p-3 rounded-[10px] hover:opacity-80 transition-opacity cursor-pointer" style="background:{{ bucket.bg_hex }};" data-bucket-index="{{ forloop.counter0 }}">
+        <div class="font-mono text-[20px] font-semibold {{ bucket.text_class }}">{{ bucket.count }}</div>
+        <div class="text-[11px] text-muted">{{ bucket.label }}</div>
+      </button>
+      {% endfor %}
+    </div>
+
+    <div id="ageBucketDetail" class="hidden mb-5 bg-bg rounded-[10px] p-4">
+      <div class="flex items-center justify-between mb-2">
+        <p id="ageBucketDetailTitle" class="text-[13px] font-semibold"></p>
+        <button type="button" id="ageBucketDetailClose" class="text-[12px] text-muted hover:text-brand font-semibold">Tutup ✕</button>
+      </div>
+      <ul id="ageBucketDetailList" class="divide-y divide-line max-h-72 overflow-y-auto"></ul>
+    </div>
+
+    <h3 class="text-[13px] font-semibold mb-2">10 Barang Tertua</h3>
+    <ul class="divide-y divide-line">
+      {% for entry in age_analysis.oldest_equipment %}
+      <li class="py-2 flex flex-wrap items-center justify-between gap-2 text-[13.5px]">
+        <a href="{% url 'equipment_detail' entry.item.pk %}" class="hover:text-brand break-words">{{ entry.item.name }} <span class="text-muted">({{ entry.item.serial_number|default:"—" }})</span></a>
+        <span class="text-muted font-mono flex-shrink-0">{{ entry.item.acquisition_year }} · {{ entry.age }} tahun</span>
+      </li>
+      {% endfor %}
+    </ul>
     {% else %}
-    <p class="text-[13px] text-muted">Belum ada data biaya di rentang ini.</p>
+    <p class="text-[13px] text-muted">
+      Belum ada barang yang punya data tahun perolehan
+      {% if age_analysis.without_year_count > 0 %}({{ age_analysis.without_year_count }} barang belum ada datanya){% endif %}.
+    </p>
     {% endif %}
   </div>
 
-  <!-- F. Lampiran Data Mentah -->
-  <div class="bg-white border border-line rounded-xl2 p-5 sm:p-6">
+  <!-- E. Lampiran Data Mentah -->
+  <div id="lampiran" class="bg-white border border-line rounded-xl2 p-5 sm:p-6 scroll-mt-24">
     <h2 class="font-display text-[16px] font-semibold mb-3">📄 Lampiran Data Mentah</h2>
     <p class="text-[13.5px] text-muted mb-4">Butuh data lengkap per baris? Download langsung, atau buka <a href="{% url 'equipment_list' %}" class="text-brand hover:underline">Data Barang</a> buat lihat/filter satu-satu.</p>
     <div class="flex flex-wrap gap-2.5">
@@ -152,5 +232,390 @@
       <a href="{% url 'report_export_full' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">⬇️ Semua Sekaligus (Excel Multi-Sheet)</a>
     </div>
   </div>
+
+  <script src="{% static 'dashboard/assets/vendor/js/scripts.js' %}"></script>
+  <script>
+    function formatRupiah(n) {
+      return 'Rp' + Math.round(n).toLocaleString('id-ID');
+    }
+
+    // Dipakai BERSAMA oleh Modul 1 (Analisis Biaya, dari fetch server)
+    // dan Modul 2 (Cek Biaya per Tahun & Bulan, dari data lokal) — jadi
+    // sengaja diletakkan di sini (di luar IIFE keduanya), bukan dobel
+    // ditulis 2x. Yang private tetap private (variabel/logic internal
+    // tiap modul), cuma "cara nampilin ke tabel" doang yang dibagi.
+    function renderCostByEquipmentSection(rows, contextLabel) {
+      const withData = document.getElementById('costByEquipmentWithData');
+      const emptyMsg = document.getElementById('costByEquipmentEmptyMsg');
+      const contextEl = document.getElementById('borosContextLabel');
+      if (contextEl) contextEl.textContent = contextLabel ? '— ' + contextLabel : '';
+
+      if (rows.length === 0) {
+        withData.classList.add('hidden');
+        emptyMsg.classList.remove('hidden');
+        return;
+      }
+      withData.classList.remove('hidden');
+      emptyMsg.classList.add('hidden');
+
+      const tbody = document.getElementById('costByEquipmentBody');
+      tbody.innerHTML = '';
+      rows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-line' + (idx === 0 ? ' bg-[#F8E2E0]/40' : '');
+
+        const tdNum = document.createElement('td');
+        tdNum.className = 'py-1.5 text-muted';
+        tdNum.textContent = idx + 1;
+
+        const tdName = document.createElement('td');
+        tdName.className = 'py-1.5';
+        tdName.textContent = row.name + (row.serial_number ? ' (' + row.serial_number + ')' : '');
+
+        const tdCount = document.createElement('td');
+        tdCount.className = 'py-1.5 text-right';
+        tdCount.textContent = row.service_count + 'x';
+
+        const tdCost = document.createElement('td');
+        tdCost.className = 'py-1.5 text-right font-mono';
+        tdCost.textContent = formatRupiah(row.total_cost);
+
+        tr.appendChild(tdNum);
+        tr.appendChild(tdName);
+        tr.appendChild(tdCount);
+        tr.appendChild(tdCost);
+        tbody.appendChild(tr);
+      });
+    }
+
+    // ============================================================
+    // MODUL 1 — 💰 Analisis Biaya (filter tanggal)
+    // Dibungkus IIFE biar variabel/fungsinya TERKUNCI di scope
+    // sendiri — nggak bisa "bocor" atau ke-akses/ketuker sama modul
+    // lain manapun. Modul ini SATU-SATUNYA yang boleh nyentuh:
+    // Tren Biaya (chart + tabel), Barang Paling Boros, dan 3 kartu
+    // ringkasan biaya. Sama sekali nggak nyentuh widget
+    // "Cek Biaya per Tahun & Bulan" (itu modul 2, di bawah).
+    // ============================================================
+    (function analisisBiayaModule() {
+      let costTrendChartInstance = null;
+      {% if cost_trend %}
+      costTrendChartInstance = new Chart(document.getElementById('costTrendChart'), {
+        type: 'bar',
+        data: {
+          labels: {{ cost_trend_labels_json|safe }},
+          datasets: [{ label: 'Biaya (Rp)', data: {{ cost_trend_values_json|safe }}, backgroundColor: '#2A5C8A', borderRadius: 6 }],
+        },
+        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+      });
+      {% endif %}
+
+      function renderCostTrendSection(labels, values) {
+        const withData = document.getElementById('costTrendWithData');
+        const emptyMsg = document.getElementById('costTrendEmptyMsg');
+
+        if (labels.length === 0) {
+          withData.classList.add('hidden');
+          emptyMsg.classList.remove('hidden');
+          return;
+        }
+        withData.classList.remove('hidden');
+        emptyMsg.classList.add('hidden');
+
+        if (costTrendChartInstance) {
+          costTrendChartInstance.data.labels = labels;
+          costTrendChartInstance.data.datasets[0].data = values;
+          costTrendChartInstance.update();
+        } else {
+          costTrendChartInstance = new Chart(document.getElementById('costTrendChart'), {
+            type: 'bar',
+            data: { labels: labels, datasets: [{ label: 'Biaya (Rp)', data: values, backgroundColor: '#2A5C8A', borderRadius: 6 }] },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+          });
+        }
+
+        const tbody = document.getElementById('costTrendTableBody');
+        tbody.innerHTML = '';
+        labels.forEach((label, i) => {
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-line';
+          const tdLabel = document.createElement('td');
+          tdLabel.className = 'py-1.5';
+          tdLabel.textContent = label;
+          const tdValue = document.createElement('td');
+          tdValue.className = 'py-1.5 text-right font-mono';
+          tdValue.textContent = formatRupiah(values[i]);
+          tr.appendChild(tdLabel);
+          tr.appendChild(tdValue);
+          tbody.appendChild(tr);
+        });
+      }
+
+      function renderSummaryCards(summary) {
+        document.getElementById('summaryTotalValue').textContent = formatRupiah(summary.total);
+        document.getElementById('summaryCountValue').textContent = summary.service_count + 'x';
+        document.getElementById('summaryAvgValue').textContent = formatRupiah(summary.avg_per_service);
+      }
+
+      async function fetchCostAnalysis(params) {
+        const loadingMsg = document.getElementById('costFilterLoadingMsg');
+        loadingMsg.classList.remove('hidden');
+        try {
+          const resp = await fetch('{% url "report_cost_analysis_ajax" %}?' + params.toString());
+          const data = await resp.json();
+          renderCostTrendSection(data.cost_trend_labels, data.cost_trend_values);
+          const dateFrom = params.get('date_from');
+          const dateTo = params.get('date_to');
+          const label = (dateFrom || dateTo)
+            ? 'filter tanggal: ' + (dateFrom || '...') + ' s/d ' + (dateTo || '...')
+            : 'sepanjang waktu';
+          renderCostByEquipmentSection(data.cost_by_equipment, label);
+          renderSummaryCards(data.summary);
+        } catch (err) {
+          console.error('Gagal memuat Analisis Biaya:', err);
+        } finally {
+          loadingMsg.classList.add('hidden');
+        }
+      }
+
+      document.getElementById('costFilterForm').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const dateFrom = document.getElementById('id_date_from').value;
+        const dateTo = document.getElementById('id_date_to').value;
+
+        const params = new URLSearchParams();
+        if (dateFrom) params.set('date_from', dateFrom);
+        if (dateTo) params.set('date_to', dateTo);
+        fetchCostAnalysis(params);
+
+        const url = new URL(window.location);
+        if (dateFrom) { url.searchParams.set('date_from', dateFrom); } else { url.searchParams.delete('date_from'); }
+        if (dateTo) { url.searchParams.set('date_to', dateTo); } else { url.searchParams.delete('date_to'); }
+        window.history.replaceState({}, '', url);
+      });
+
+      document.getElementById('costFilterResetBtn').addEventListener('click', () => {
+        document.getElementById('id_date_from').value = '';
+        document.getElementById('id_date_to').value = '';
+        fetchCostAnalysis(new URLSearchParams());
+        const url = new URL(window.location);
+        url.search = '';
+        window.history.replaceState({}, '', url);
+      });
+    })();
+
+    // ============================================================
+    // MODUL 2 — ⭐ Cek Biaya per Tahun & Bulan
+    // Widget yang SEPENUHNYA berdiri sendiri. Dibungkus IIFE
+    // terpisah dari Modul 1 — nggak ada satupun variabel/fungsi di
+    // sini yang dipakai atau menyentuh Analisis Biaya, Barang Paling
+    // Boros, atau kartu ringkasan. Semua data 12 bulan x semua tahun
+    // udah di-preload, jadi interaksinya murni lokal di browser.
+    // ============================================================
+    (function cekBiayaTahunBulanModule() {
+      const costByYear = {{ cost_by_month_multi_year_json|safe }};
+      let currentYear = {{ default_cost_year }};
+      let selectedMonths = new Set();
+      let thisYearChart = null;
+      const baseBarColor = '#2A5C8A';
+      const highlightBarColor = '#C97A2E';
+
+      function renderMonthButtons(year) {
+        const monthPicker = document.getElementById('monthPicker');
+        monthPicker.innerHTML = '';
+        costByYear[year].short_labels.forEach((label, idx) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'month-btn px-3 py-1.5 rounded-[8px] text-[12px] font-semibold border border-line bg-white hover:border-brand transition-colors';
+          btn.textContent = label;
+          btn.dataset.monthIndex = idx;
+          btn.addEventListener('click', () => toggleMonth(idx));
+          monthPicker.appendChild(btn);
+        });
+        updateMonthButtonStates();
+      }
+
+      function updateMonthButtonStates() {
+        document.querySelectorAll('.month-btn').forEach((b, i) => {
+          const active = selectedMonths.has(i);
+          if (active) {
+            b.classList.remove('bg-white');
+            b.classList.add('bg-brand', 'text-white', 'border-brand');
+          } else {
+            b.classList.remove('bg-brand', 'text-white', 'border-brand');
+            b.classList.add('bg-white');
+          }
+        });
+      }
+
+      function renderYearChart() {
+        const data = costByYear[currentYear];
+        let labels, values;
+
+        if (selectedMonths.size === 0) {
+          labels = data.short_labels;
+          values = data.values;
+        } else {
+          const sortedIdx = [...selectedMonths].sort((a, b) => a - b);
+          labels = sortedIdx.map((i) => data.short_labels[i]);
+          values = sortedIdx.map((i) => data.values[i]);
+        }
+
+        const barColors = new Array(values.length).fill(baseBarColor);
+        if (selectedMonths.size === 0 && data.highest_month_index !== null) {
+          barColors[data.highest_month_index] = highlightBarColor;
+        }
+
+        if (thisYearChart) {
+          thisYearChart.data.labels = labels;
+          thisYearChart.data.datasets[0].data = values;
+          thisYearChart.data.datasets[0].backgroundColor = barColors;
+          thisYearChart.update();
+        } else {
+          thisYearChart = new Chart(document.getElementById('thisYearCostChart'), {
+            type: 'bar',
+            data: { labels: labels, datasets: [{ label: 'Biaya (Rp)', data: values, backgroundColor: barColors, borderRadius: 6 }] },
+            options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+          });
+        }
+
+        document.getElementById('yearTotalLabel').textContent = 'Total tahun ' + currentYear + ': ' + formatRupiah(data.total);
+        document.getElementById('yearHighestLabel').textContent =
+          data.highest_month_index !== null
+            ? '📈 Bulan paling boros: ' + data.labels[data.highest_month_index]
+            : 'Belum ada biaya tercatat di tahun ini.';
+
+        if (selectedMonths.size > 0) {
+          const sortedIdx = [...selectedMonths].sort((a, b) => a - b);
+          const totalSelected = sortedIdx.reduce((sum, i) => sum + data.values[i], 0);
+          const monthNames = sortedIdx.map((i) => data.labels[i]).join(' + ');
+          document.getElementById('monthPickerResult').innerHTML =
+            '<strong>' + monthNames + ' ' + currentYear + ':</strong> ' + formatRupiah(totalSelected);
+        } else {
+          document.getElementById('monthPickerResult').textContent = '';
+        }
+      }
+
+      function computeBorosForSelectedMonths() {
+        const data = costByYear[currentYear];
+        const monthIndices = selectedMonths.size > 0
+          ? [...selectedMonths]
+          : Array.from({ length: 12 }, (_, i) => i);
+
+        const merged = {};
+        monthIndices.forEach((mIdx) => {
+          (data.by_equipment_per_month[mIdx] || []).forEach((entry) => {
+            if (!merged[entry.id]) {
+              merged[entry.id] = { name: entry.name, serial_number: entry.serial_number, total_cost: 0, service_count: 0 };
+            }
+            merged[entry.id].total_cost += entry.total_cost;
+            merged[entry.id].service_count += entry.service_count;
+          });
+        });
+
+        const rows = Object.values(merged).sort((a, b) => b.total_cost - a.total_cost).slice(0, 10);
+
+        const monthLabel = selectedMonths.size > 0
+          ? [...selectedMonths].sort((a, b) => a - b).map((i) => data.short_labels[i]).join('+') + ' ' + currentYear
+          : 'tahun ' + currentYear;
+        renderCostByEquipmentSection(rows, monthLabel);
+      }
+
+      function toggleMonth(idx) {
+        if (selectedMonths.has(idx)) {
+          selectedMonths.delete(idx);
+        } else {
+          selectedMonths.add(idx);
+        }
+        updateMonthButtonStates();
+        renderYearChart();
+        computeBorosForSelectedMonths();
+      }
+
+      function selectYear(year) {
+        currentYear = year;
+        selectedMonths.clear();
+        document.querySelectorAll('.year-btn').forEach((b) => {
+          const active = parseInt(b.dataset.year, 10) === year;
+          if (active) {
+            b.classList.remove('bg-white');
+            b.classList.add('bg-brand', 'text-white', 'border-brand');
+          } else {
+            b.classList.remove('bg-brand', 'text-white', 'border-brand');
+            b.classList.add('bg-white');
+          }
+        });
+        renderMonthButtons(year);
+        renderYearChart();
+        computeBorosForSelectedMonths();
+      }
+
+      document.querySelectorAll('.year-btn').forEach((btn) => {
+        btn.addEventListener('click', () => selectYear(parseInt(btn.dataset.year, 10)));
+      });
+
+      selectYear(currentYear);
+    })();
+
+    // ============================================================
+    // MODUL 3 — 📅 Analisis Usia Barang
+    // Berdiri sendiri juga — cuma nyentuh panel drill-down umur
+    // barangnya sendiri, nggak terhubung ke modul 1 atau 2.
+    // ============================================================
+    (function usiaBarangModule() {
+      const ageBuckets = {{ age_buckets_json|safe }};
+
+      function showAgeBucketDetail(idx) {
+        const bucket = ageBuckets[idx];
+        const detail = document.getElementById('ageBucketDetail');
+        const title = document.getElementById('ageBucketDetailTitle');
+        const list = document.getElementById('ageBucketDetailList');
+
+        title.textContent = bucket.label + ' — ' + bucket.items.length + ' barang';
+        list.innerHTML = '';
+
+        if (bucket.items.length === 0) {
+          const li = document.createElement('li');
+          li.className = 'py-2 text-[13px] text-muted';
+          li.textContent = 'Tidak ada barang di rentang umur ini.';
+          list.appendChild(li);
+        } else {
+          bucket.items.forEach((item) => {
+            const li = document.createElement('li');
+            li.className = 'py-2 flex flex-wrap items-center justify-between gap-2 text-[13.5px]';
+
+            const a = document.createElement('a');
+            a.href = item.url;
+            a.className = 'hover:text-brand break-words';
+            a.textContent = item.name + (item.serial_number ? ' (' + item.serial_number + ')' : '');
+
+            const span = document.createElement('span');
+            span.className = 'text-muted font-mono flex-shrink-0';
+            span.textContent = item.acquisition_year + ' · ' + item.age + ' tahun';
+
+            li.appendChild(a);
+            li.appendChild(span);
+            list.appendChild(li);
+          });
+        }
+
+        detail.classList.remove('hidden');
+        detail.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      document.querySelectorAll('.age-bucket-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          showAgeBucketDetail(parseInt(btn.dataset.bucketIndex, 10));
+        });
+      });
+
+      const ageBucketDetailCloseBtn = document.getElementById('ageBucketDetailClose');
+      if (ageBucketDetailCloseBtn) {
+        ageBucketDetailCloseBtn.addEventListener('click', () => {
+          document.getElementById('ageBucketDetail').classList.add('hidden');
+        });
+      }
+    })();
+  </script>
 
 {% endblock %}

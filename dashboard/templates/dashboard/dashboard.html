@@ -1,5 +1,6 @@
 {# dashboard/templates/dashboard/dashboard.html #}
 {% extends "base.html" %}
+{% load static %}
 {% block title %}Dashboard{% endblock %}
 {% block content %}
 
@@ -256,7 +257,7 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="{% static 'dashboard/assets/vendor/js/scripts.js' %}"></script>
   <script>
     new Chart(document.getElementById('costChart'), {
       type: 'bar',
@@ -275,7 +276,7 @@
     });
     new Chart(document.getElementById('resultChart'), {
       type: 'doughnut',
-      data: { labels: {{ result_labels_json|safe }}, datasets: [{ data: {{ result_values_json|safe }}, backgroundColor: ['#328A63', '#C97A2E', '#C0483F', '#2A5C8A'] }] },
+      data: { labels: {{ result_labels_json|safe }}, datasets: [{ data: {{ result_values_json|safe }}, backgroundColor: {{ result_colors_json|safe }} }] },
       options: { plugins: { legend: { position: 'bottom' } } },
     });
   </script>

@@ -186,30 +186,38 @@ def schedule_delete(request, pk):
     """Hapus jadwal. Default balik ke daftar Jadwal, kecuali diakses
     dengan ?next=<url>.
 
-    Staf juga bisa pilih status akhir barang (Aktif/Rusak) lewat form
-    di halaman konfirmasi — soalnya sync_equipment_status() otomatis
-    balikin status ke Aktif kalau nggak ada jadwal tersisa sama sekali
-    buat barang itu, padahal barangnya bisa aja masih beneran rusak
-    (misal barang hasil import Excel berstatus Rusak yang kebetulan
-    punya jadwal nyasar yang perlu dihapus). Pilihan staf di form ini
-    diterapkan SETELAH sync_equipment_status() jalan, jadi selalu jadi
-    keputusan akhir."""
+    Staf bisa pilih status akhir barang (Aktif/Rusak) lewat form di
+    halaman konfirmasi — TAPI cuma kalau jadwal yang dihapus ini adalah
+    jadwal TERBARU buat barang itu (dicek lewat schedule.is_editable
+    SEBELUM dihapus). Alasannya: sync_equipment_status() selalu ngambil
+    dari jadwal terbaru yang MASIH ADA — kalau yang dihapus itu jadwal
+    LAMA (bukan terbaru) dan masih ada jadwal lain yang lebih baru,
+    status barang nggak akan berubah sama sekali gara-gara hapus ini,
+    jadi nggak boleh ada pilihan manual yang malah maksa nimpa status
+    yang udah benar itu. Pilihan manual cuma masuk akal & diterapkan
+    kalau jadwal yang dihapus itu satu-satunya/terbaru — barulah
+    sync_equipment_status() bisa balik ke Aktif (kalau nggak ada
+    jadwal tersisa), dan staf perlu pilihan buat koreksi kalau
+    barangnya sebenarnya masih rusak."""
     schedule = MaintenanceSchedule.objects.filter(pk=pk).first()
     if schedule is None:
         messages.warning(request, "Jadwal ini sudah tidak ada (mungkin sudah dihapus sebelumnya).")
         return redirect(_safe_next_url(request, reverse("schedule_list")))
+
+    is_latest_schedule = schedule.is_editable  # cek SEBELUM dihapus
 
     if request.method == "POST":
         equipment = schedule.equipment
         schedule.delete()
         sync_equipment_status(equipment)
 
-        chosen_status = request.POST.get("resulting_status")
-        if chosen_status in (Equipment.STATUS_ACTIVE, Equipment.STATUS_DAMAGED):
-            equipment.refresh_from_db()
-            if equipment.status != chosen_status:
-                equipment.status = chosen_status
-                equipment.save(update_fields=["status", "updated_at"])
+        if is_latest_schedule:
+            chosen_status = request.POST.get("resulting_status")
+            if chosen_status in (Equipment.STATUS_ACTIVE, Equipment.STATUS_DAMAGED):
+                equipment.refresh_from_db()
+                if equipment.status != chosen_status:
+                    equipment.status = chosen_status
+                    equipment.save(update_fields=["status", "updated_at"])
 
         messages.success(request, "Jadwal maintenance berhasil dihapus.")
         return redirect(_safe_next_url(request, reverse("schedule_list")))
@@ -218,6 +226,7 @@ def schedule_delete(request, pk):
         "maintenance/schedule_confirm_delete.html",
         {
             "schedule": schedule,
+            "is_latest_schedule": is_latest_schedule,
             "active_page": _active_page_for_next(request, "maintenance"),
             "next_url": request.GET.get("next", ""),
         },

@@ -1,14 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Detail Riwayat — {{ equipment.name }}{% endblock %}
 
-{% block extra_head %}
-  {% if log.has_location %}
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>.leaflet-container{z-index:0}</style>
-  {% endif %}
-{% endblock %}
-
 {% block content %}
 <div class="flex flex-wrap justify-between items-center gap-4 mb-6">
   <div>
