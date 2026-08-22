@@ -1,0 +1,258 @@
+{# reports/templates/reports/report_pdf.html #}
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<title>Laporan Asset Service Management</title>
+<style>
+  @page {
+    size: a4 portrait;
+    margin: 2.2cm 1.6cm 2.2cm 1.6cm;
+    @frame footer {
+      -pdf-frame-content: footerContent;
+      bottom: 1cm;
+      margin-left: 1.6cm;
+      margin-right: 1.6cm;
+      height: 1cm;
+    }
+  }
+  body {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 10.5px;
+    color: #14213D;
+  }
+  .letterhead-table { width: 100%; border-collapse: collapse; }
+  .letterhead-table td { vertical-align: top; padding: 0; }
+  .company-name { font-size: 13px; font-weight: bold; color: #14213D; margin-top: 6px; }
+  .company-sub { font-size: 8.5px; color: #5E6B7C; margin-top: 1px; }
+  .doc-meta { text-align: right; font-size: 9px; color: #14213D; line-height: 1.6; }
+  .doc-meta .doc-label { font-size: 8px; color: #5E6B7C; text-transform: uppercase; }
+  .title-banner-table { width: 100%; border-collapse: collapse; margin: 12px 0 24px 0; }
+  .title-banner-table td {
+    border-top: 3px solid #2A5C8A;
+    border-bottom: 1px solid #DDE3EA;
+    padding: 10px 0;
+    text-align: center;
+  }
+  .main-title { font-size: 17px; font-weight: bold; color: #2A5C8A; }
+  .sub-title { font-size: 9px; color: #5E6B7C; margin-top: 3px; }
+  h2 {
+    font-size: 13.5px;
+    color: #14213D;
+    border-bottom: 1px solid #DDE3EA;
+    padding-bottom: 6px;
+    margin: 20px 0 12px 0;
+  }
+  h3 {
+    font-size: 11.5px;
+    margin: 16px 0 8px 0;
+  }
+  table.statgrid {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 4px;
+    margin-bottom: 10px;
+  }
+  table.statgrid td {
+    text-align: center;
+    padding: 10px 4px;
+    border: 1px solid #DDE3EA;
+  }
+  table.statgrid .num { font-size: 16px; font-weight: bold; }
+  table.statgrid .label { font-size: 8.5px; color: #5E6B7C; }
+
+  table.data {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9.5px;
+  }
+  table.data th, table.data td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid #DDE3EA;
+  }
+  table.data th {
+    background-color: #F1F4F8;
+    font-size: 8.5px;
+    color: #5E6B7C;
+  }
+  .text-right { text-align: right; }
+  .badge {
+    padding: 2px 8px;
+    font-size: 8.5px;
+    font-weight: bold;
+    color: white;
+  }
+  .badge-green { background-color: #328A63; }
+  .badge-brand { background-color: #2A5C8A; }
+  .badge-amber { background-color: #C97A2E; }
+  .badge-red { background-color: #C0483F; }
+  .badge-muted { background-color: #5E6B7C; }
+  .warning-text { color: #C0483F; font-weight: bold; }
+  .muted { color: #5E6B7C; }
+  .empty-note { color: #5E6B7C; font-size: 10px; padding: 6px 0; }
+  #footerContent {
+    text-align: center;
+    font-size: 8px;
+    color: #5E6B7C;
+  }
+</style>
+</head>
+<body>
+
+  <div id="footerContent">
+    Halaman <pdf:pagenumber /> dari <pdf:pagecount />
+  </div>
+
+  <table class="letterhead-table">
+    <tr>
+      <td width="58%">
+        <img src="{% static 'assets/img/ihc.png' %}" alt="Logo IHC" style="height:40px;">
+        <div class="company-name">RS Pelabuhan Palembang</div>
+        <div class="company-sub">Bagian Sarana &amp; Prasarana &mdash; Asset Service Management System</div>
+      </td>
+      <td width="42%" class="doc-meta">
+        <div class="doc-label">Dokumen Internal</div>
+        <div>No. Ref: ASM-{{ generated_at|date:"YmdHi" }}</div>
+        <div>Tanggal: {{ generated_at|date:"d-m-Y" }}</div>
+        <div>Pukul: {{ generated_at|date:"H:i" }} WIB</div>
+      </td>
+    </tr>
+  </table>
+
+  <table class="title-banner-table">
+    <tr>
+      <td>
+        <div class="main-title">LAPORAN ASET &amp; MAINTENANCE</div>
+        <div class="sub-title">Ringkasan Kondisi Aset, Biaya Perawatan, dan Analisis Usia Barang</div>
+      </td>
+    </tr>
+  </table>
+
+  <h2>Ringkasan Eksekutif</h2>
+  <p>
+    Dari total <b>{{ total_equipment }}</b> barang:
+    <b>{{ status_breakdown.active }}</b> Aktif,
+    <b>{{ status_breakdown.scheduled }}</b> Dijadwalkan,
+    <b>{{ status_breakdown.under_repair }}</b> Dalam Perbaikan,
+    dan <b>{{ status_breakdown.damaged }}</b> Rusak.
+    {% if status_breakdown.damaged > 0 or status_breakdown.under_repair > 0 %}
+      <span class="warning-text">Perlu perhatian: {{ status_breakdown.damaged|add:status_breakdown.under_repair }} barang dalam kondisi tidak dapat digunakan.</span>
+    {% endif %}
+  </p>
+  <p>
+    Biaya maintenance bulan ini <b>Rp{{ cost_mom.this_month|floatformat:0 }}</b>
+    {% if cost_mom.change_pct is None %}
+      {% if cost_mom.this_month > 0 %}— biaya pertama tercatat bulan ini (bulan lalu tidak ada pengeluaran).{% else %}— belum ada pengeluaran tercatat bulan ini maupun bulan lalu.{% endif %}
+    {% elif cost_mom.change_pct > 0 %}
+      — naik {{ cost_mom.change_pct }}% dibanding bulan lalu (Rp{{ cost_mom.last_month|floatformat:0 }}).
+    {% elif cost_mom.change_pct < 0 %}
+      — turun {{ cost_mom.change_pct|slice:"1:" }}% dibanding bulan lalu (Rp{{ cost_mom.last_month|floatformat:0 }}).
+    {% else %}
+      — sama seperti bulan lalu.
+    {% endif %}
+  </p>
+
+  <table class="statgrid">
+    <tr>
+      <td><div class="num">{{ total_equipment }}</div><div class="label">Total Barang</div></td>
+      <td><div class="num">{{ status_breakdown.active }}</div><div class="label">Aktif</div></td>
+      <td><div class="num">{{ status_breakdown.scheduled }}</div><div class="label">Dijadwalkan</div></td>
+      <td><div class="num">{{ status_breakdown.under_repair }}</div><div class="label">Dalam Perbaikan</div></td>
+      <td><div class="num">{{ status_breakdown.damaged }}</div><div class="label">Rusak</div></td>
+    </tr>
+  </table>
+
+  <h2>Kesehatan Aset — Belum Diservis 6 Bulan Terakhir (atau Belum Pernah){% if stale_equipment_total > 0 %} — {% if stale_equipment_total > stale_equipment|length %}menampilkan {{ stale_equipment|length }} dari {{ stale_equipment_total }} barang{% else %}{{ stale_equipment_total }} barang{% endif %}{% endif %}</h2>
+  {% if stale_equipment %}
+  <table class="data">
+    <tr><th>Nama Barang</th><th>No. Seri</th><th>Status</th></tr>
+    {% for item in stale_equipment %}
+    <tr>
+      <td>{{ item.name }}</td>
+      <td>{{ item.serial_number|default:"—" }}</td>
+      <td><span class="badge badge-{{ item.status_color }}">{{ item.get_status_display }}</span></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% if stale_equipment_total > stale_equipment|length %}
+  <p class="empty-note">Menampilkan {{ stale_equipment|length }} dari total {{ stale_equipment_total }} barang — daftar lengkap ada di aplikasi (Data Barang).</p>
+  {% endif %}
+  {% else %}
+  <p class="empty-note">Semua barang punya riwayat servis dalam 6 bulan terakhir.</p>
+  {% endif %}
+
+  <h2>Analisis Biaya</h2>
+  <table class="statgrid">
+    <tr>
+      <td><div class="num">Rp{{ cost_summary.this_year|floatformat:0 }}</div><div class="label">Biaya Tahun Ini</div></td>
+      <td><div class="num">Rp{{ cost_summary.all_time|floatformat:0 }}</div><div class="label">Total Sepanjang Waktu</div></td>
+      <td><div class="num">Rp{{ cost_summary.avg_per_service|floatformat:0 }}</div><div class="label">Rata-rata / Servis</div></td>
+    </tr>
+  </table>
+
+  <h3>Tren Biaya 12 Bulan Terakhir</h3>
+  {% if cost_trend %}
+  <table class="data">
+    <tr><th>Bulan</th><th class="text-right">Total Biaya</th></tr>
+    {% for label, value in cost_trend %}
+    <tr><td>{{ label }}</td><td class="text-right">Rp{{ value|floatformat:0 }}</td></tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty-note">Belum ada riwayat yang selesai.</p>
+  {% endif %}
+
+  <h3>Barang Paling Boros Biaya Servis</h3>
+  {% if cost_by_equipment %}
+  <table class="data">
+    <tr><th style="width:24px;">#</th><th>Barang</th><th class="text-right">Jumlah Servis</th><th class="text-right">Total Biaya</th></tr>
+    {% for row in cost_by_equipment %}
+    <tr>
+      <td>{{ forloop.counter }}</td>
+      <td>{{ row.schedule__equipment__name }} <span class="muted">({{ row.schedule__equipment__serial_number|default:"—" }})</span></td>
+      <td class="text-right">{{ row.service_count }}x</td>
+      <td class="text-right">Rp{{ row.total_cost|floatformat:0 }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty-note">Belum ada data biaya.</p>
+  {% endif %}
+
+  <h2>Analisis Usia Barang</h2>
+  {% if age_analysis.with_year_count > 0 %}
+  <p>
+    Dari {{ age_analysis.with_year_count }} barang yang punya data tahun perolehan, rata-rata umurnya {{ age_analysis.avg_age }} tahun.
+    {% if age_analysis.without_year_count > 0 %}<span class="muted">{{ age_analysis.without_year_count }} barang lain belum ada data tahun perolehannya, tidak diikutkan di analisis ini.</span>{% endif %}
+  </p>
+
+  <table class="statgrid">
+    <tr>
+      {% for bucket in age_analysis.buckets %}
+      <td><div class="num">{{ bucket.count }}</div><div class="label">{{ bucket.label }}</div></td>
+      {% endfor %}
+    </tr>
+  </table>
+
+  <h3>10 Barang Tertua</h3>
+  <table class="data">
+    <tr><th>Barang</th><th>Tahun Perolehan</th><th class="text-right">Umur</th></tr>
+    {% for entry in age_analysis.oldest_equipment %}
+    <tr>
+      <td>{{ entry.item.name }} <span class="muted">({{ entry.item.serial_number|default:"—" }})</span></td>
+      <td>{{ entry.item.acquisition_year }}</td>
+      <td class="text-right">{{ entry.age }} tahun</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="empty-note">
+    Belum ada barang yang punya data tahun perolehan
+    {% if age_analysis.without_year_count > 0 %}({{ age_analysis.without_year_count }} barang belum ada datanya){% endif %}.
+  </p>
+  {% endif %}
+
+</body>
+</html>

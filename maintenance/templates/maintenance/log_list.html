@@ -34,15 +34,12 @@
   </form>
 
   <div class="bg-white border border-line rounded-xl2 overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full min-w-[1160px] border-collapse">
-        <thead>
-          <tr class="bg-bg/60">
+    <div class="overflow-auto max-h-[65vh]">
+      <table class="w-full min-w-[860px] border-collapse">
+        <thead class="sticky top-0 z-10">
+          <tr class="bg-bg">
             <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tanggal Mulai</th>
             <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Barang</th>
-            <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Merk</th>
-            <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tipe</th>
-            <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">No. Seri</th>
             <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Teknisi</th>
             <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Tindakan</th>
             <th class="text-left text-[11px] tracking-[0.06em] uppercase text-muted font-semibold px-4 py-3">Status</th>
@@ -53,23 +50,23 @@
         </thead>
         <tbody>
           {% for log in log_list %}
-          <tr class="border-t border-line">
-            <td class="px-4 py-3 text-[13px] font-mono">{{ log.date|date:"d-m-Y" }}</td>
-            <td class="px-4 py-3 text-[13px] font-semibold">
-              <a href="{% url 'equipment_detail' log.schedule.equipment.pk %}" class="hover:text-brand">{{ log.schedule.equipment.name }}</a>
+          <tr class="border-t border-line {% cycle 'bg-white' 'bg-bg/40' %}">
+            <td class="px-4 py-3 text-[13px] font-mono align-top">{{ log.date|date:"d-m-Y" }}</td>
+            <td class="px-4 py-3 align-top">
+              <a href="{% url 'equipment_detail' log.schedule.equipment.pk %}" class="hover:text-brand text-[13px] font-semibold block">{{ log.schedule.equipment.name }}</a>
+              <span class="text-[11px] text-muted">
+                {{ log.schedule.equipment.brand|default:"—" }}{% if log.schedule.equipment.model_type %} · {{ log.schedule.equipment.model_type }}{% endif %}{% if log.schedule.equipment.serial_number %} · SN: {{ log.schedule.equipment.serial_number }}{% endif %}
+              </span>
             </td>
-            <td class="px-4 py-3 text-[13px] font-mono">{{ log.schedule.equipment.brand }}</td>
-            <td class="px-4 py-3 text-[13px] font-mono">{{ log.schedule.equipment.model_type }}</td>
-            <td class="px-4 py-3 text-[13px] font-mono">{{ log.schedule.equipment.serial_number }}</td>
-            <td class="px-4 py-3 text-[13px]">{{ log.technician|default:"—" }}</td>
-            <td class="px-4 py-3 text-[13px]">
+            <td class="px-4 py-3 text-[13px] align-top">{{ log.technician|default:"—" }}</td>
+            <td class="px-4 py-3 text-[13px] align-top">
               {{ log.action_taken|truncatechars:60 }}
-              {% if log.photo_before or log.photo_after or log.photo_receipt %}<span title="Ada dokumentasi foto"></span>{% endif %}
+              {% if log.photo_before or log.photo_after or log.photo_receipt %}<span title="Ada dokumentasi foto">📷</span>{% endif %}
             </td>
-            <td class="px-4 py-3"><span class="badge badge-{{ log.result_color }}">{{ log.get_result_display }}</span></td>
-            <td class="px-4 py-3 text-[13px] font-mono">{{ log.completed_date|date:"d-m-Y"|default:"—" }}</td>
-            <td class="px-4 py-3 text-[13px] font-mono">Rp{{ log.cost|floatformat:0 }}</td>
-            <td class="px-4 py-3">
+            <td class="px-4 py-3 align-top"><span class="badge badge-{{ log.result_color }}">{{ log.get_result_display }}</span></td>
+            <td class="px-4 py-3 text-[13px] font-mono align-top">{{ log.completed_date|date:"d-m-Y"|default:"—" }}</td>
+            <td class="px-4 py-3 text-[13px] font-mono align-top">Rp{{ log.cost|floatformat:0 }}</td>
+            <td class="px-4 py-3 align-top">
               <div class="flex gap-2 flex-wrap">
                 <a href="{% url 'log_detail' log.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-brand hover:opacity-90">Detail</a>
                 <a href="{% url 'log_edit' log.pk %}" class="px-3 py-1.5 rounded-[8px] text-[12px] font-semibold text-white bg-amber hover:opacity-90">Edit</a>
@@ -78,7 +75,7 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="11" class="text-center px-5 pt-11 pb-12 text-[13.5px] text-muted border-t border-line">
+            <td colspan="8" class="text-center px-5 pt-11 pb-12 text-[13.5px] text-muted border-t border-line">
               <div class="w-[38px] h-[38px] mx-auto mb-3 rounded-[10px] border-[1.5px] border-dashed border-line
                           flex items-center justify-center text-line font-mono text-[15px]">···</div>
               Belum ada riwayat maintenance.

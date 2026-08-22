@@ -1,3 +1,4 @@
+# maintenance/views.py
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
@@ -90,6 +91,12 @@ def schedule_list(request):
             qs = qs.filter(scheduled_date__gte=data["date_from"])
         if data["date_to"]:
             qs = qs.filter(scheduled_date__lte=data["date_to"])
+
+    # Jadwal terbaru duluan — model Meta.ordering-nya sendiri ascending
+    # (lama dulu), sengaja nggak diubah global (biar nggak ganggu
+    # tempat lain yang mungkin ngandelin urutan itu), jadi di-override
+    # eksplisit di sini aja.
+    qs = qs.order_by("-scheduled_date", "-created_at")
 
     paginator = Paginator(qs, 20)
     page_obj = paginator.get_page(request.GET.get("page"))
@@ -292,7 +299,17 @@ def log_list(request):
         if data["result"]:
             qs = qs.filter(result=data["result"])
         if data["year"]:
-            qs = qs.filter(date__year=data["year"])
+            # Riwayat itu soal kapan kerjaan BENERAN kelar — filter
+            # tahun di sini pakai completed_date, bukan date (tanggal
+            # jadwal). Riwayat yang belum selesai (completed_date
+            # kosong) otomatis nggak match filter tahun manapun, itu
+            # sesuai — belum ada "tahun selesai" buat mereka.
+            qs = qs.filter(completed_date__year=data["year"])
+
+    # Yang paling baru SELESAI duluan. Riwayat yang belum selesai
+    # (completed_date kosong) jatuh ke paling bawah — masuk akal,
+    # "riwayat" idealnya nunjukin yang udah kelar duluan.
+    qs = qs.order_by("-completed_date", "-date")
 
     paginator = Paginator(qs, 20)
     page_obj = paginator.get_page(request.GET.get("page"))

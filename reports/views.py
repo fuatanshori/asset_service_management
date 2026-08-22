@@ -1,14 +1,19 @@
 # reports/views.py
 import json
+import os
 from collections import OrderedDict
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
+from django.contrib.staticfiles import finders
 from django.db.models import Avg, Count, Sum
 from django.db.models.functions import TruncMonth
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import redirect, render
+from django.template.loader import render_to_string
 from django.utils import timezone
 from openpyxl import Workbook
+from xhtml2pdf import pisa
 
 from equipment.analytics import get_equipment_age_analysis, get_equipment_status_breakdown
 from equipment.models import Equipment
@@ -37,6 +42,7 @@ def report_view(request):
     cost_by_month_multi_year = get_cost_by_month_multi_year()
     available_cost_years = sorted(cost_by_month_multi_year.keys(), reverse=True)
     age_analysis = get_equipment_age_analysis()
+    stale_data = get_stale_equipment(months_threshold=6, limit=10)
 
     context = {
         "active_page": "report",
@@ -57,7 +63,8 @@ def report_view(request):
         "cost_trend_labels_json": json.dumps(cost_trend["labels"]),
         "cost_trend_values_json": json.dumps(cost_trend["values"]),
         "cost_by_equipment": get_cost_by_equipment(date_from=date_from, date_to=date_to, limit=10),
-        "stale_equipment": get_stale_equipment(months_threshold=6, limit=10),
+        "stale_equipment": stale_data["items"],
+        "stale_equipment_total": stale_data["total_count"],
         # Fitur "Cek Biaya per Tahun & Bulan" — SEMUA tahun yang punya
         # data dikirim sekaligus di sini, biar ganti tahun/bulan di
         # halaman Laporan murni JS, nggak reload sama sekali.
@@ -192,6 +199,90 @@ def report_export_full(request):
         ])
 
     wb.save(response)
+    return response
+
+
+def _pdf_static_link_callback(uri, rel):
+    """xhtml2pdf butuh PATH FILE ASLI buat baca gambar (logo, dst)
+    langsung dari disk — beda sama browser biasa yang bisa akses lewat
+    HTTP. {% static %} di template cuma ngehasilin URL (/static/...),
+    jadi fungsi ini yang nerjemahin URL itu jadi path file beneran.
+    Pola ini standar dari dokumentasi xhtml2pdf buat integrasi sama
+    Django, dipasang lewat parameter link_callback= di pisa.CreatePDF().
+
+    Coba lewat finders dulu (jalan pas DEBUG=True / belum
+    collectstatic) — kalau nggak ketemu, fallback ke STATIC_ROOT
+    (jalan di production, setelah collectstatic beneran ngumpulin
+    semua static file ke satu folder)."""
+    result = finders.find(uri.replace(settings.STATIC_URL, ""))
+    if result:
+        path = result[0] if isinstance(result, (list, tuple)) else result
+    elif uri.startswith(settings.STATIC_URL):
+        path = os.path.join(settings.STATIC_ROOT, uri.replace(settings.STATIC_URL, ""))
+    else:
+        return uri  # URL absolut (http://...) — biarin apa adanya
+
+    if not os.path.isfile(path):
+        raise Exception(f"File statis nggak ketemu buat PDF: {path}")
+    return path
+
+
+@login_required
+def report_export_pdf(request):
+    """Export Laporan versi PDF — cocok buat presentasi formal (misal
+    ke manajemen), beda tujuan dari export Excel yang lebih ke arah
+    data mentah/kerja lanjutan.
+
+    Pakai xhtml2pdf (render HTML -> PDF) — SENGAJA bukan WeasyPrint,
+    biar nggak butuh library sistem (GTK/Pango/Cairo) yang ribet
+    dipasang khususnya di Windows. xhtml2pdf murni Python, tinggal pip
+    install, jalan sama persis di Windows maupun di container Linux
+    tanpa perlu apt-get tambahan apapun.
+
+    SENGAJA pakai template terpisah (report_pdf.html), BUKAN
+    report.html yang biasa — baik WeasyPrint maupun xhtml2pdf sama-sama
+    nggak jalanin JavaScript, jadi semua chart Chart.js (canvas) bakal
+    kosong kalau dipaksa pakai template yang sama. Template PDF ini
+    nunjukin data yang sama tapi dalam bentuk tabel statis, dan nggak
+    nyertain widget interaktif "Cek Biaya per Tahun & Bulan" — itu
+    emang dirancang buat dipakai on-screen, nggak masuk akal buat
+    dokumen statis.
+
+    Dukungan CSS xhtml2pdf lebih terbatas dari WeasyPrint (nggak ada
+    CSS Paged Media standar) — makanya report_pdf.html pakai sintaks
+    @frame + <pdf:pagenumber/> ala xhtml2pdf buat nomor halaman, sama
+    tabel HTML asli buat kotak statistik (bukan CSS display:table)."""
+    status_breakdown = get_equipment_status_breakdown()
+    cost_summary = get_cost_summary()
+    cost_mom = get_month_over_month_cost()
+    cost_trend = get_cost_trend(limit_months=12)
+    age_analysis = get_equipment_age_analysis()
+    stale_data = get_stale_equipment(months_threshold=6, limit=10)
+
+    context = {
+        "generated_at": timezone.localtime(),
+        "total_equipment": Equipment.objects.count(),
+        "status_breakdown": status_breakdown,
+        "cost_summary": cost_summary,
+        "cost_mom": cost_mom,
+        "cost_trend": list(zip(cost_trend["labels"], cost_trend["values"])),
+        "cost_by_equipment": get_cost_by_equipment(limit=10),
+        "stale_equipment": stale_data["items"],
+        "stale_equipment_total": stale_data["total_count"],
+        "age_analysis": age_analysis,
+    }
+
+    html_string = render_to_string("reports/report_pdf.html", context)
+
+    response = HttpResponse(content_type="application/pdf")
+    filename = f"laporan_{timezone.localdate().isoformat()}.pdf"
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
+
+    pisa_status = pisa.CreatePDF(html_string, dest=response, link_callback=_pdf_static_link_callback)
+    if pisa_status.err:
+        return HttpResponse(
+            "Gagal membuat PDF — cek log server buat detail errornya.", status=500
+        )
     return response
 
 

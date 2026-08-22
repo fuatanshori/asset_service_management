@@ -291,3 +291,24 @@ def get_cost_by_month_multi_year():
     datanya udah kekirim sekaligus di awal (termasuk breakdown
     per-barang, buat ngitung ulang Barang Paling Boros)."""
     return {year: get_cost_by_month_for_year(year) for year in get_available_cost_years()}
+
+def get_stale_equipment(months_threshold=6, limit=10):
+    """Barang yang belum pernah diservis sama sekali, atau udah lebih dari
+    N bulan sejak servis terakhirnya kelar — sinyal potensi keabaian.
+
+    Ngembaliin dict {"items": [...], "total_count": N} — BUKAN cuma
+    list biasa. Alasannya: kalau datanya banyak (bisa ratusan di RS
+    beneran), UI perlu tau TOTAL sebenarnya (buat ditampilin di
+    judul/ringkasan) — bukan cuma panjang list yang udah dipotong ke
+    `limit`, soalnya itu bakal nyesatin (misal ada 300 barang belum
+    diservis, tapi kelihatannya cuma "10 barang" kalau cuma ngitung
+    panjang list yang ditampilin)."""
+    cutoff = timezone.localdate() - timedelta(days=months_threshold * 30)
+    recently_serviced_ids = (
+        MaintenanceLog.objects.exclude(completed_date__isnull=True)
+        .filter(completed_date__gte=cutoff)
+        .values_list("schedule__equipment_id", flat=True)
+        .distinct()
+    )
+    qs = Equipment.objects.exclude(pk__in=recently_serviced_ids).order_by("name")
+    return {"items": list(qs[:limit]), "total_count": qs.count()}

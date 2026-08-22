@@ -78,7 +78,7 @@
       <div><div class="text-[11px] text-muted">Rusak</div><div class="font-mono text-[18px] font-semibold text-red">{{ status_breakdown.damaged }}</div></div>
     </div>
 
-    <h3 class="text-[13px] font-semibold mb-2">⏳ Belum Diservis 6 Bulan Terakhir (atau Belum Pernah){% if stale_equipment %} — {{ stale_equipment|length }} barang{% endif %}</h3>
+    <h3 class="text-[13px] font-semibold mb-2">⏳ Belum Diservis 6 Bulan Terakhir (atau Belum Pernah){% if stale_equipment_total > 0 %} — {% if stale_equipment_total > stale_equipment|length %}menampilkan {{ stale_equipment|length }} dari {{ stale_equipment_total }} barang{% else %}{{ stale_equipment_total }} barang{% endif %}{% endif %}</h3>
     {% if stale_equipment %}
       <ul class="divide-y divide-line">
         {% for item in stale_equipment %}
@@ -88,6 +88,9 @@
         </li>
         {% endfor %}
       </ul>
+      {% if stale_equipment_total > stale_equipment|length %}
+      <p class="text-[11px] text-muted mt-2">Menampilkan {{ stale_equipment|length }} dari total {{ stale_equipment_total }} barang. Cek <a href="{% url 'equipment_list' %}" class="text-brand hover:underline">Data Barang</a> buat daftar lengkapnya.</p>
+      {% endif %}
     {% else %}
       <p class="text-[13px] text-muted">Semua barang punya riwayat servis dalam 6 bulan terakhir. 👍</p>
     {% endif %}
@@ -230,6 +233,7 @@
       <a href="{% url 'report_export_equipment_summary' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">📊 Ringkasan Barang, Digabung (Excel)</a>
       <a href="{% url 'schedule_export' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">⬇️ Jadwal &amp; Riwayat (Excel)</a>
       <a href="{% url 'report_export_full' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold text-white bg-brand hover:bg-brand-dark transition-colors">⬇️ Semua Sekaligus (Excel Multi-Sheet)</a>
+      <a href="{% url 'report_export_pdf' %}" class="px-4 py-2.5 rounded-[10px] text-[13.5px] font-semibold border border-line bg-white hover:border-brand hover:text-brand transition-colors">📄 Export PDF (Presentasi)</a>
     </div>
   </div>
 
